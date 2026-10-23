@@ -112,7 +112,11 @@ async def register(body: Credentials, request: Request, response: Response):
     if not body.name.strip():
         raise HTTPException(422, 'Your name is required.')
     if cloud():
-        result = await supabase_auth('signup', {'email': body.email, 'password': body.password, 'data': {'name': body.name.strip()}})
+        signup_payload = {'email': body.email, 'password': body.password, 'data': {'name': body.name.strip()}}
+        redirect_url = os.environ.get('AUTH_REDIRECT_URL')
+        if redirect_url:
+            signup_payload['email_redirect_to'] = redirect_url
+        result = await supabase_auth('signup', signup_payload)
         if not result.get('access_token'):
             return {'confirmationRequired': True, 'message': 'Check your email to confirm your account, then sign in.'}
         identity = result['user']
@@ -159,7 +163,11 @@ async def resend_verification(body: ResendVerification, request: Request):
     if not cloud():
         raise HTTPException(400, 'Email verification is not enabled for local accounts.')
     email = Credentials.email_valid(body.email)
-    await supabase_auth('resend', {'type': 'signup', 'email': email})
+    resend_payload = {'type': 'signup', 'email': email}
+    redirect_url = os.environ.get('AUTH_REDIRECT_URL')
+    if redirect_url:
+        resend_payload['email_redirect_to'] = redirect_url
+    await supabase_auth('resend', resend_payload)
     return {'message': 'If this account still needs confirmation, a new email has been requested. Open the newest message. Already confirmed? Sign in with your password.'}
 
 

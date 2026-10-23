@@ -83,8 +83,7 @@ export default function AuthScreen({
       <section className="auth-form-side">
         <div className="auth-form">
           <div className="auth-public-links"><Link href="/">← Product home</Link><Link href="/help">Help & guides</Link></div>
-          <div className="eyebrow">YOUR TEAM’S NEXT CHAPTER</div>
-          <h2>{register ? "Start building together." : "Welcome back."}</h2>
+          <h2>{register ? "Your next project starts here." : "Back to the shared plan."}</h2>
           <p>
             {register
               ? "Create your account and give your team a shared workspace."

@@ -37,23 +37,41 @@ export default function SignalShader() {
     gl.enableVertexAttribArray(p);
     gl.vertexAttribPointer(p, 2, gl.FLOAT, false, 0, 0);
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timeUniform = gl.getUniformLocation(program, "time");
+    const resolutionUniform = gl.getUniformLocation(program, "resolution");
     let frame = 0;
+    let visible = false;
+    const resize = () => {
+      const scale = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.max(1, Math.round(canvas.clientWidth * scale));
+      canvas.height = Math.max(1, Math.round(canvas.clientHeight * scale));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    resize();
     const draw = (time: number) => {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(
-        gl.getUniformLocation(program, "resolution"),
+        resolutionUniform,
         canvas.width,
         canvas.height,
       );
-      gl.uniform1f(gl.getUniformLocation(program, "time"), time * 0.001);
+      gl.uniform1f(timeUniform, time * 0.001);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
-      if (!reduced) frame = requestAnimationFrame(draw);
+      if (!reduced && visible && !document.hidden) frame = requestAnimationFrame(draw);
     };
-    frame = requestAnimationFrame(draw);
+    const restart = () => {
+      cancelAnimationFrame(frame);
+      if (visible && !document.hidden) frame = requestAnimationFrame(draw);
+    };
+    const intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; restart(); });
+    intersection.observe(canvas);
+    document.addEventListener('visibilitychange', restart);
     return () => {
       cancelAnimationFrame(frame);
+      observer.disconnect();
+      intersection.disconnect();
+      document.removeEventListener('visibilitychange', restart);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vertex);

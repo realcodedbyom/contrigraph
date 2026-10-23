@@ -1,0 +1,33 @@
+// Read-only production smoke checks. Never creates users or sends mail.
+import assert from 'node:assert/strict';
+const origin = 'https://dsvv.live';
+const paths = ['/', '/robots.txt', '/sitemap.xml', '/contrigraph/', '/contrigraph/help/', '/contrigraph/app/', '/contrigraph/favicon.svg', '/contrigraph/robots.txt', '/contrigraph/sitemap.xml', '/contrigraph/api/health'];
+const responses = await Promise.all(paths.map(async path => {
+  const response = await fetch(origin + path, { signal: AbortSignal.timeout(20000) });
+  assert.equal(response.status, path === '/' ? 204 : 200, path);
+  assert.ok(response.headers.get('x-content-type-options') === 'nosniff', path);
+  assert.ok(response.headers.get('strict-transport-security'), path);
+  return [path, response, await response.text()];
+}));
+const [, homepage, html] = responses.find(([path]) => path === '/contrigraph/');
+assert.match(homepage.headers.get('cache-control'), /no-cache/);
+assert.equal(homepage.headers.get('x-powered-by'), null);
+assert.match(html, /A shared plan/);
+assert.match(html, /application\/ld\+json/);
+assert.match(html, /og:title/);
+assert.match(html, /rel="canonical"/);
+const asset = html.match(/\/contrigraph\/_next\/static\/[^" ]+\.js/)?.[0];
+assert.ok(asset, 'Hashed JavaScript asset is linked');
+const staticResponse = await fetch(origin + asset, { signal: AbortSignal.timeout(20000) });
+assert.equal(staticResponse.status, 200);
+assert.match(staticResponse.headers.get('cache-control'), /max-age=31536000.*immutable/);
+const www = await fetch('https://www.dsvv.live/contrigraph/', { redirect: 'manual', signal: AbortSignal.timeout(20000) });
+assert.equal(www.status, 301);
+assert.equal(www.headers.get('location'), origin + '/contrigraph/');
+const alias = await fetch(origin + '/contrigraph/LOGIN/', { redirect: 'manual' });
+assert.equal(alias.status, 302);
+assert.equal(new URL(alias.headers.get('location'), origin).pathname, '/contrigraph/app/');
+const body = await fetch(origin + '/contrigraph/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(17000) });
+assert.equal(body.status, 413);
+assert.equal((await body.json()).detail, 'Request too large.');
+console.log(`${paths.length} public routes passed; HTML/static caching, TLS canonical host, headers, metadata, login alias, and auth body limit passed.`);

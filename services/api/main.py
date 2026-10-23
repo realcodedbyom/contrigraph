@@ -9,6 +9,7 @@ import time
 import httpx
 from fastapi import FastAPI, Request, Response, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError, BaseModel, Field, ConfigDict
 from pwdlib import PasswordHash
 from models import Credentials, Command, ProjectData, Task, Member, Milestone, Comment, Scenario, ProgressUpdate
@@ -45,10 +46,19 @@ async def browser_protection(request, call_next):
         origin = request.headers.get('origin')
         allowed = os.environ.get('APP_ORIGINS', 'http://127.0.0.1:3000,http://localhost:3000').split(',')
         if origin and origin not in allowed:
-            return Response('Untrusted request origin.', status_code=403)
+            return JSONResponse({'detail': 'Untrusted request origin.'}, status_code=403)
+        limit = 16 * 1024 if request.url.path.startswith('/auth/') else (6 * 1024 * 1024 if '/files' in request.url.path else 1024 * 1024)
         length = request.headers.get('content-length', '0')
-        if length.isdigit() and int(length) > 6 * 1024 * 1024:
-            return Response('Request too large.', status_code=413)
+        if length.isdigit() and int(length) > limit:
+            return JSONResponse({'detail': 'Request too large.'}, status_code=413)
+        # Enforce the limit for chunked requests too, before parsing JSON or multipart.
+        chunks, received = [], 0
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > limit:
+                return JSONResponse({'detail': 'Request too large.'}, status_code=413)
+            chunks.append(chunk)
+        request._body = b''.join(chunks)
     response = await call_next(request)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Cache-Control'] = 'no-store'
@@ -76,21 +86,33 @@ def throttle(request):
     queue = attempts[key]
     while queue and queue[0] < time.time() - 60:
         queue.popleft()
-    if len(queue) >= 15:
-        raise HTTPException(429, 'Too many attempts. Wait one minute before retrying.')
+    if len(attempts) > 10000:
+        for old_key in list(attempts):
+            if not attempts[old_key] or attempts[old_key][-1] < time.time() - 60:
+                del attempts[old_key]
+    if len(queue) >= 5:
+        raise HTTPException(429, 'Too many attempts. Wait one minute before retrying.', headers={'Retry-After': '60'})
     queue.append(time.time())
 
 
 async def supabase_auth(path, payload):
+    payload = dict(payload)
+    redirect = payload.pop('email_redirect_to', None)
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/' + path,
-                                         headers={'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY']}, json=payload)
+                                         headers={'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY']}, params={'redirect_to': redirect} if redirect else None, json=payload)
     except httpx.HTTPError:
         raise HTTPException(503, 'The identity service is unavailable. Please retry.')
     if response.status_code >= 400:
-        data = response.json()
-        raise HTTPException(400, data.get('msg') or data.get('error_description') or 'Authentication failed.')
+        try:
+            data = response.json()
+        except ValueError:
+            raise HTTPException(502, 'The identity service returned an unexpected response. Please retry later.')
+        message = data.get('msg') or data.get('error_description') or data.get('message') or 'Authentication failed.'
+        if data.get('code') == 'over_email_send_rate_limit' or 'email rate limit' in message.lower():
+            raise HTTPException(503, 'Confirmation email delivery is temporarily unavailable. Please try again later. If you already confirmed your email, you can still sign in.')
+        raise HTTPException(429 if response.status_code == 429 else 400, message)
     return response.json()
 
 

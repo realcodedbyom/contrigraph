@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
   verification: { google: "pKzuRuF1pI6pjW6jGAI4_P4vor89xp19ZdBCNHw6-Dw" },
   manifest: "/contrigraph/site.webmanifest",
-  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }], apple: "/favicon.svg" },
+  icons: { icon: [{ url: "/contrigraph/favicon.svg", type: "image/svg+xml" }], apple: "/contrigraph/favicon.svg" },
 };
 
 const structuredData = { "@context": "https://schema.org", "@graph": [

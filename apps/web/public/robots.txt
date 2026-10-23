@@ -1,5 +1,8 @@
 User-agent: *
+Allow: /llms.txt
+Allow: /llms-full.txt
 Allow: /contrigraph/
+Disallow: /contrigraph/api/
 Allow: /contrigraph/llms.txt
 Allow: /contrigraph/llms-full.txt
 Disallow: /

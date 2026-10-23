@@ -304,3 +304,42 @@ def test_milestone_rename_preserves_task_grouping(client):
     linked = {t['id'] for t in p['data']['tasks'] if t['milestone'] == previous}
     assert linked
     assert all(t['milestone'] == milestone['name'] for t in after['data']['tasks'] if t['id'] in linked)
+
+def test_auth_throttle_returns_retry_after(client):
+    for _ in range(5):
+        assert client.post('/auth/login',json={'email':'nobody@example.com','password':'wrong-password'}).status_code == 401
+    result=client.post('/auth/login',json={'email':'nobody@example.com','password':'wrong-password'})
+    assert result.status_code == 429
+    assert result.headers['retry-after'] == '60'
+
+
+def test_auth_body_limit_catches_chunked_request(client):
+    result=client.post('/auth/login',content=iter([b'x'*9000,b'x'*9000]),headers={'Content-Type':'application/json'})
+    assert result.status_code == 413
+    assert result.json()['detail'] == 'Request too large.'
+
+
+def test_origin_rejection_is_json(client):
+    result=client.post('/auth/login',json={'email':'nobody@example.com','password':'wrong-password'},headers={'Origin':'https://untrusted.example'})
+    assert result.status_code == 403
+    assert result.json()['detail'] == 'Untrusted request origin.'
+
+
+def test_confirmation_quota_error_and_redirect_contract(client,monkeypatch):
+    monkeypatch.setenv('SUPABASE_URL','https://identity.example')
+    monkeypatch.setenv('SUPABASE_PUBLISHABLE_KEY','public-test-key')
+    monkeypatch.setenv('AUTH_REDIRECT_URL','https://dsvv.live/contrigraph/')
+    captured={}
+    class FakeClient:
+        def __init__(self,**kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self,*args): pass
+        async def post(self,url,**kwargs):
+            captured.update(kwargs)
+            return main.httpx.Response(429,json={'code':'over_email_send_rate_limit','msg':'email rate limit exceeded'})
+    monkeypatch.setattr(main.httpx,'AsyncClient',FakeClient)
+    result=client.post('/auth/register',json={'email':'new@example.com','password':'safe-password','name':'New member'})
+    assert result.status_code == 503
+    assert 'Confirmation email delivery' in result.json()['detail']
+    assert captured['params'] == {'redirect_to':'https://dsvv.live/contrigraph/'}
+    assert 'email_redirect_to' not in captured['json']

@@ -80,9 +80,14 @@ The same approval workflow at a 390-pixel viewport, after a successful persisted
 
 ![Mobile approval](screenshots/mobile-approval.png)
 
-
 ## Teammate invitations
 
 Get invitation opens a dialog with a copy button, visible errors, and single-use sharing instructions. This component preview uses an intentionally invalid example code. Copy/paste and Escape dismissal were verified in Chrome.
 
 ![Invitation dialog with an example code](screenshots/invitation-dialog.png)
+
+# Public FAQs
+
+The live FAQ page with public navigation for Product, Help, FAQs, and Login.
+
+![ContriGraph FAQ page](screenshots/faq-page.png)

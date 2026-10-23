@@ -16,6 +16,8 @@
 
 - Product: https://dsvv.live/contrigraph/
 - Help and product guides: https://dsvv.live/contrigraph/help/
+- FAQs: https://dsvv.live/contrigraph/faq/
+- Log in: https://dsvv.live/contrigraph/login/
 - Sitemap: https://dsvv.live/contrigraph/sitemap.xml
 - Source: https://github.com/realcodedbyom/contrigraph
 

@@ -126,7 +126,7 @@ export default function ProductPage() {
               inaccessible projects are unknown.
             </p>
           </details>
-          <Link href="/help">Browse all help & guides →</Link>
+          <Link href="/faq">Read all FAQs →</Link>
         </section>
         <section className="public-cta">
           <h2>
@@ -141,6 +141,8 @@ export default function ProductPage() {
       <footer className="public-footer">
         <span>ContriGraph · Built for student teams</span>
         <Link href="/help">Help & guides</Link>
+        <Link href="/faq">FAQs</Link>
+        <Link href="/login">Log in</Link>
         <Link href="/privacy">Privacy</Link>
         <SkiperLink href="https://github.com/realcodedbyom/contrigraph">
           View the source

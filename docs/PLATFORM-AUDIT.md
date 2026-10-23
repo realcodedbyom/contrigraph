@@ -1,5 +1,25 @@
 # Platform audit and next improvements
 
+## Notification inbox and interactive product tour
+
+The personal inbox now covers assignments (including approved portfolio redistribution), help requests, new/changed blockers, lead replies and review submissions. Only claimed recipients receive alerts; the actor does not notify themselves. Project and notification writes share a transaction, and stale or replayed updates cannot create duplicate alerts. Read state is private to each account and does not modify project versions. Every read and read-state mutation rechecks current membership. The new `003_notifications.sql` migration adds a private RLS-enabled table; existing project data is preserved. No historical backfill, email or device push is implied. Active windows poll every 15 seconds; older items are paginated.
+
+The product page adds an interactive assignment → request → reply → review example, with original layout, GSAP interaction motion, keyboard navigation and reduced-motion support. Existing Lenis, React Bits CountUp, Skiper/Vengeance components and the original shader remain in place. Examples are clearly labeled, with no fabricated customers or performance claims.
+
+REA was explicitly requested and used through the pinned 6.7.0 CLI because the session has no connected REA MCP tools. No agent configuration or native engines were installed. Observed public evidence:
+
+- Jira notification documentation: `ev_aed8b1e1161dda4c611e0843a4816b3462c7a2b99f7a5359e8048f2714936426`.
+- Jira public product page: `ev_9bc1ef9ccc38e94cf1352496ec4d93c206672e8a534530a06d22837f664229e7`.
+- ClickUp public product page: `ev_82d8a93899ebb5bff2ae5a58e703c5be94be035789b5c91745d56fdea628894c`.
+- ClickUp public Inbox feature action: `ev_03ea6f07c53df2a46296a9e8687738c7add1b0aec6d246791840401c477fea42`, all three steps completed; opened a signup dialog, not an authenticated inbox.
+- ClickUp help browser capture `ev_4b59f6be548d289e943182d60b305be6dc36ba1b35e9bb57c206678918a7f827` reached bot verification and is not evidence of the inbox. The official help content was retrieved separately through web browsing. A preliminary feature capture failed because its heading locator was ambiguous; the corrected run targeted the observed Inbox button.
+
+Sources: [ClickUp Inbox](https://help.clickup.com/hc/en-us/articles/33947959867543-What-is-the-Inbox), [Jira personal settings](https://support.atlassian.com/jira-software-cloud/docs/manage-your-jira-personal-settings/), [ClickUp product](https://clickup.com/), [Jira product](https://www.atlassian.com/software/jira). The useful patterns are a personal unread queue, direct context navigation, clear signup/login entry points and interactive product demonstrations. This is a bounded public-surface comparison, not private code recovery or a verified feature-parity claim. Raw captures remain in ignored local artifacts; owned REA browsers were cleaned up.
+
+Validation: 137 API tests, including transactional rollback, recipient isolation, revoked membership, replay prevention, pagination and portfolio notifications. Browser checks confirmed help → lead inbox → reply → member inbox → exact resolved request, review notification → reviewable task, assignment → correct task, and read/unread/bulk-read behavior. The product tour was checked at desktop and 390px mobile width. All test mutations used an isolated local database.
+
+Deployment verification: local and VPS production builds passed, and the VPS staging suite also passed all 137 tests. The private notification migration completed while preserving existing data. Both services are active; all 13 public-route checks and the production authentication, metadata, security-header and body-limit smoke checks pass. The live authenticated inbox loads successfully; the public tour responds to keyboard navigation. Production browser checks were read-only. Source and the previous build were retained on the VPS for rollback.
+
 ## 24 October follow-up: daily work before analysis
 
 The user reported clipped navigation at 100% zoom, difficulty finding assigned work, unclear task removal and no obvious way to request a lead decision. A bounded review of [Jira reviews on Capterra](https://www.capterra.com/p/19319/JIRA/reviews/), [Jira reviews on G2](https://www.g2.com/products/jira/reviews), and [ClickUp user discussion](https://www.reddit.com/r/clickup/comments/1lbyhu4/) found similar complaints about complexity, navigation and too many interactions. These are qualitative examples, not a representative survey or proof of demand.

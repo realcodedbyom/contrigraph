@@ -5,6 +5,7 @@ import ProductExperience, {
   ProductSignal,
 } from "@/components/ProductExperience";
 import SkiperLink from "@/components/SkiperLink";
+import ProductWorkflow from "@/components/ProductWorkflow";
 export default function ProductPage() {
   return (
     <div className="public-site">
@@ -27,7 +28,7 @@ export default function ProductPage() {
               <Link className="public-button" href="/app?signup=1">
                 Start your team workspace ↗
               </Link>
-              <Link href="/help">See how it works →</Link>
+              <a href="#walkthrough">Walk through a workday →</a>
             </div>
             <p className="public-note">
               Skill-aware planning. Explainable forecasts. Decisions stay with
@@ -36,6 +37,7 @@ export default function ProductPage() {
           </div>
           <ProductExperience />
         </section>
+        <ProductWorkflow />
         <section id="product" className="public-section">
           <p className="public-kicker">FROM ASSIGNMENT TO DELIVERY</p>
           <h2>Keep the whole team in view.</h2>
@@ -45,7 +47,8 @@ export default function ProductPage() {
               <h3>Make the next step clear.</h3>
               <p>
                 Assign owners, define milestones, and connect dependencies. See
-                blocked work before it becomes a missed deadline.
+                blocked work before it becomes a missed deadline. Personal inboxes
+                bring assignments, requests and replies back to the work.
               </p>
               <Link href="/help#getting-started">Build your first plan →</Link>
             </article>

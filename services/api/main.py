@@ -517,7 +517,7 @@ def command(pid: str, body: Command, user=Depends(current_user)):
             meta = {'scenario': scenario, 'affected': affected, 'before': before['forecast']['date'], 'after': after['forecast']['date']}
         validate(data)
         data = ProjectData.model_validate(data).model_dump(mode='json')
-        save_project(db, pid, version, data)
+        save_project(db, pid, version, data, mid)
         event(db, pid, actor, kind, text, task_id, meta)
     return get_project(pid, user)
 
@@ -634,3 +634,6 @@ def revision(pid: str, user=Depends(current_user)):
 
 from redistribution_routes import register as register_redistribution
 register_redistribution(app, current_user, PREVIEW_KEY, get_project)
+
+from notifications import register as register_notifications
+register_notifications(app, current_user, connect)

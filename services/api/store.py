@@ -88,6 +88,7 @@ def init_db():
         # Deployment explicitly runs migrate.py; ordinary app startup needs no DDL rights.
         with connect() as db:
             db.execute('SELECT id FROM users LIMIT 0')
+            db.execute('SELECT id FROM notifications LIMIT 0')
         return
     with connect() as db:
         db.executescript('''
@@ -101,6 +102,8 @@ def init_db():
         CREATE INDEX IF NOT EXISTS events_project ON events(project_id,time);
         CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), task_id TEXT NOT NULL, name TEXT NOT NULL, media_type TEXT NOT NULL, content BLOB NOT NULL, uploaded_by TEXT NOT NULL);
         ''')
+        from notifications import SCHEMA
+        db.executescript(SCHEMA)
 
 
 def digest(value):
@@ -134,7 +137,10 @@ def event(db, project_id, member, kind, text, task_id='', meta=None):
                 datetime.now(timezone.utc).isoformat(), json.dumps(meta or {})))
 
 
-def save_project(db, project_id, version, data):
+def save_project(db, project_id, version, data, actor_id=''):
+    previous = db.execute('SELECT data FROM projects WHERE id=?', (project_id,)).fetchone()
     result = db.execute('UPDATE projects SET data=?,version=version+1 WHERE id=? AND version=?', (json.dumps(data), project_id, version))
     if result.rowcount != 1:
         raise HTTPException(409, 'This project changed in another session. Reload and review the latest version.')
+    from notifications import notify_changes
+    notify_changes(db, project_id, json.loads(previous['data']), data, actor_id)

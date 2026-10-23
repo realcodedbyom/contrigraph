@@ -1,5 +1,17 @@
 # ContriGraph in use
 
+## Interactive product walkthrough
+
+The live public page explains assignment, help, lead replies and review through a keyboard-accessible example. All people and project details in this walkthrough are fictional.
+
+![Interactive product walkthrough](screenshots/product-workflow.png)
+
+## Notification inbox
+
+Persisted assignments and lead replies, with read/unread controls and direct navigation. Captured with isolated QA accounts.
+
+![Notification inbox](screenshots/notification-inbox.png)
+
 Captured from the running main application using isolated sample workspaces. No real student accounts, credentials, or private project data are shown. These images document the interface; the GitHub repository does not host a live backend.
 
 ## Project overview

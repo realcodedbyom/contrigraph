@@ -18,6 +18,9 @@ import { Modal, Field, LoadTable } from "@/components/WorkspaceUI";
 import { dependencyPositions } from "@/lib/graph";
 import TaskBoard from "@/components/TaskBoard";
 import TaskQuickActions from "@/components/TaskQuickActions";
+import NotificationInbox, {
+  Notification,
+} from "@/components/NotificationInbox";
 import {
   MyWork,
   RequestComposer,
@@ -90,6 +93,7 @@ export default function Home({
     [mobileNavOpen, setMobileNavOpen] = useState(false),
     [boardView, setBoardView] = useState("All tasks"),
     [requestTask, setRequestTask] = useState(""),
+    [focusedRequest, setFocusedRequest] = useState(""),
     [archiveReason, setArchiveReason] = useState(""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -142,18 +146,25 @@ export default function Home({
     if (!p) return;
     const id = p.id,
       version = p.version;
+    let cancelled = false;
     const timer = setInterval(() => {
       if (document.hidden) return;
       api<{ version: number }>("/projects/" + id + "/revision")
         .then(async (r) => {
           if (r.version !== version) {
-            setP(await api<Project>("/projects/" + id));
-            setNotice("Updated with your team’s latest changes.");
+            const updated = await api<Project>("/projects/" + id);
+            if (!cancelled) {
+              setP(updated);
+              setNotice("Updated with your team’s latest changes.");
+            }
           }
         })
         .catch(() => {});
     }, 5000);
-    return () => clearInterval(timer);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [p?.id, p?.version]);
   async function run(work: () => Promise<void>) {
     setBusy(true);
@@ -211,6 +222,35 @@ export default function Home({
     setTask(t);
     setModal("task");
   };
+  async function openNotification(item: Notification) {
+    const target = await api<Project>("/projects/" + item.projectId);
+    return () => {
+      setP(target);
+      setProjects((previous) =>
+        previous.some((x) => x.id === target.id)
+          ? previous
+          : [...previous, { id: target.id, name: target.data.name }],
+      );
+      setSimulation(null);
+      setMobileNavOpen(false);
+      setModal("");
+      if (item.requestId) {
+        setFocusedRequest(item.requestId);
+        setSection("Team requests");
+      } else {
+        const targetTask = target.data.tasks.find((t) => t.id === item.taskId);
+        setSection(targetTask ? "My work" : "Archived tasks");
+        if (targetTask) {
+          setTask(targetTask);
+          setModalVersion(target.version);
+          setModal("task");
+        } else
+          setNotice(
+            "This task is no longer active. Check archived tasks for its history.",
+          );
+      }
+    };
+  }
   const newTask = () => {
     if (!p) return;
     setTask({
@@ -440,6 +480,7 @@ export default function Home({
             Workspace <span className="cg-muted">/ {section}</span>
           </span>
           <div>
+            <NotificationInbox onOpen={openNotification} />
             <span className="cg-live">
               ●{" "}
               {busy
@@ -564,7 +605,8 @@ export default function Home({
               )}
               {section === "Team requests" && (
                 <TeamRequests
-                  key={p.id}
+                  key={p.id + focusedRequest}
+                  focusedRequest={focusedRequest}
                   project={p}
                   command={command}
                   compose={() => askLead()}

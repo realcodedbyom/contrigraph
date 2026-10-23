@@ -48,6 +48,8 @@ assert.doesNotMatch(
 assert.match(homepage.headers.get("cache-control"), /no-cache/);
 assert.equal(homepage.headers.get("x-powered-by"), null);
 assert.match(html, /Know what/);
+assert.match(html, /id="walkthrough"/);
+assert.match(html, /Explore the team workflow/);
 assert.match(html, /application\/ld\+json/);
 assert.match(html, /og:title/);
 assert.match(html, /rel="canonical"/);
@@ -155,6 +157,8 @@ assert.equal(body.status, 413);
 assert.equal((await body.json()).detail, "Request too large.");
 const me = await fetch(origin + "/contrigraph/api/auth/me");
 assert.equal(me.status, 401);
+const notifications = await fetch(origin + "/contrigraph/api/notifications");
+assert.equal(notifications.status, 401);
 const settings = await fetch("https://clerk.dsvv.live/v1/environment", {
   signal: AbortSignal.timeout(20000),
 });

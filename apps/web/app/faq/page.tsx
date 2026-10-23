@@ -17,6 +17,11 @@ export const metadata: Metadata = {
 };
 const questions = [
   {
+    id: "notifications",
+    question: "How will I know when someone assigns work or replies?",
+    answer: "Your Inbox shows task assignments and lead replies. Leads receive requests for help and blocker reports; leads and reviewers receive review submissions. Notifications persist across visits and refresh every 15 seconds while the workspace is active. Open one to reach the task or exact request, or mark it read or unread. These are in-app notifications, not email or device push. You need a claimed team profile; your own actions do not notify you.",
+  },
+  {
     id: "my-work",
     question: "Where do I find my tasks and ask for help?",
     answer:

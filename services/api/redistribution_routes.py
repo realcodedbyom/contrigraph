@@ -91,7 +91,7 @@ def register(app, current_user, preview_key, get_project):
             old_owner = task['owner']
             task['owner'] = body.memberId
             actor = next(m for m in project['members'] if m['id'] == mids[body.projectId])
-            save_project(db, body.projectId, versions[body.projectId], project)
+            save_project(db, body.projectId, versions[body.projectId], project, actor['id'])
             event(db, body.projectId, actor, 'decision', 'approved portfolio redistribution: ' + body.reason.strip(), body.taskId,
                   {'kind': 'portfolio-reassignment', 'from': old_owner, 'to': body.memberId,
                    'sourceVersion': versions[body.projectId], 'contextDigest': signature(preview_key, snapshot, proposal, body.expiresAt),

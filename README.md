@@ -30,6 +30,7 @@ On macOS/Linux, activate the virtual environment with `source services/api/.venv
 
 ## What works
 
+- Persistent, personal notification inbox across accessible projects: assignments, lead replies, help requests, blockers and review submissions. Read/unread state, pagination, bulk marking of displayed items, and direct task/request navigation. Polls every 15 seconds while active; no email or device push delivery.
 - My work opens by default with assigned tasks, remaining effort, deadlines, blockers and recent request replies. Navigation scrolls independently on laptops and collapses behind a project menu on mobile.
 - Task-linked team requests for help, deadline changes, reassignment, new work and archiving. Leads respond with a recorded decision; responses do not silently change the plan. Requests are visible to the project team.
 - Lead-only task archive and restore, preserving comments and attachments. Dependent work and open requests must be resolved first; accepted work remains in contribution history.
@@ -54,6 +55,8 @@ No qualified member, an unresolved blocker without a date, or insufficient capac
 The sample scenario moves 12h of testing from the scheduling specialist to a qualified interface teammate. On the 23 October 2026 sample calendar, delivery changes from 3 November to 30 October. Actual results follow the current planning date and entered calendars.
 
 ## Supabase database activation
+
+Existing installations must run `services/api/migrate.py` before starting this version. Migration `003_notifications.sql` adds the private notifications table and index without changing existing project data. Notifications are generated for new changes, not backfilled from historical activity.
 
 Postgres stores projects, sessions, files, and audit events in a private schema. The adapter uses a bounded connection pool. Local SQLite remains available for development. No database or credentials are included in this repository.
 

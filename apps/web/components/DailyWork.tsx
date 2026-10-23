@@ -252,25 +252,31 @@ export function TeamRequests({
   command,
   compose,
   openTask,
+  focusedRequest = "",
 }: {
   project: Project;
   command: Command;
   compose: () => void;
   openTask: (t: Task) => void;
+  focusedRequest?: string;
 }) {
   const lead =
     p.data.members.find((m) => m.id === p.myMemberId)?.role === "lead";
-  const [filter, setFilter] = useState(lead ? "Open" : "Mine"),
+  const [filter, setFilter] = useState(
+      focusedRequest ? "Linked request" : lead ? "Open" : "Mine",
+    ),
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
   const requests = p.data.requests || [];
   const shown = requests
     .filter((r) =>
-      filter === "Open"
-        ? r.status === "Open"
-        : filter === "Mine"
-          ? r.author === p.myMemberId
-          : true,
+      filter === "Linked request"
+        ? r.id === focusedRequest
+        : filter === "Open"
+          ? r.status === "Open"
+          : filter === "Mine"
+            ? r.author === p.myMemberId
+            : true,
     )
     .slice()
     .sort((a, b) =>
@@ -294,7 +300,12 @@ export function TeamRequests({
   return (
     <>
       <div className="cg-task-views" aria-label="Request filters">
-        {["Open", "Mine", "All"].map((f) => (
+        {[
+          ...(focusedRequest ? ["Linked request"] : []),
+          "Open",
+          "Mine",
+          "All",
+        ].map((f) => (
           <button
             key={f}
             aria-pressed={filter === f}

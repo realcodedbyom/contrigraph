@@ -263,7 +263,8 @@ export default function Home() {
       )}
       <aside className="cg-sidebar">
         <a className="cg-brand" href={process.env.NEXT_PUBLIC_APP_BASE_PATH || "/"}>
-          ▦ <strong>contrigraph.</strong>
+          <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
+          <strong>contrigraph.</strong>
         </a>
         <span className="cg-caption">TEAM WORKSPACE</span>
         <select

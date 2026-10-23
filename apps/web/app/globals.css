@@ -3153,10 +3153,18 @@ main {
   z-index: 10;
 }
 .cg-brand {
+  display: flex;
+  align-items: center;
   font-size: 25px;
   letter-spacing: -1px;
   text-decoration: none;
   margin-bottom: 40px;
+}
+.cg-brand .brand-mark {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 26px;
+  margin-right: 10px;
 }
 .cg-caption {
   font-size: 10px;

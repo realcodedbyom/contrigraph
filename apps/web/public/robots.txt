@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /contrigraph/
+Disallow: /
+
+Sitemap: https://dsvv.live/contrigraph/sitemap.xml

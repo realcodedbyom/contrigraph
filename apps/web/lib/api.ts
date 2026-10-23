@@ -5,13 +5,15 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_APP_BASE_PATH || "";
+const appPath = (path: string) => `${APP_BASE_PATH}${path}`;
 export async function api<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch("/api" + path, {
+    response = await fetch(appPath("/api" + path), {
       credentials: "same-origin",
       cache: "no-store",
       ...init,

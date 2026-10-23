@@ -262,7 +262,7 @@ export default function Home() {
         </div>
       )}
       <aside className="cg-sidebar">
-        <a className="cg-brand" href="/">
+        <a className="cg-brand" href={process.env.NEXT_PUBLIC_APP_BASE_PATH || "/"}>
           ▦ <strong>contrigraph.</strong>
         </a>
         <span className="cg-caption">TEAM WORKSPACE</span>
@@ -1714,7 +1714,7 @@ export default function Home() {
               <h2>Attachments</h2>
               {(d.tasks.find((t) => t.id === task.id)?.files || []).map((f) => (
                 <p key={f.id}>
-                  <a href={"/api/files/" + f.id}>{f.name}</a> ·{" "}
+                  <a href={(process.env.NEXT_PUBLIC_APP_BASE_PATH || "") + "/api/files/" + f.id}>{f.name}</a> ·{" "}
                   {Math.ceil(f.size / 1024)} KB
                 </p>
               ))}

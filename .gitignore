@@ -18,3 +18,19 @@ data/
 *.log
 proto/
 .deploy-*.tgz
+
+# Local video deliverables and editor/render caches
+/brag-output/
+/brag-output-*/
+.hyperframes/
+.thumbnails/
+.waveform-cache/
+
+# Tool caches and operating-system metadata
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
+Desktop.ini

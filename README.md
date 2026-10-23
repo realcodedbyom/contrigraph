@@ -78,7 +78,7 @@ npm test
 npm run build
 ```
 
-The 109-test backend suite covers scheduling, approvals, roles, invitations, attachments, and Clerk authentication. Clerk checks exercise real RSA signatures, expiry, issuer and origin validation, verified primary email, stable account mapping, rejection of old sessions, and project isolation. Tests use isolated databases and mocked external identity responses.
+The 110-test backend suite covers scheduling, approvals, roles, invitations, attachments, and Clerk authentication. Clerk checks exercise real RSA signatures, expiry, issuer and origin validation, verified primary email, stable account mapping, rejection of old sessions, and project isolation. Tests use isolated databases and mocked external identity responses.
 
 Browser checks verified the live Clerk Google/email login and signup screens. Production Google sign-in completed and opened an authenticated workspace. Ten public route checks passed, including caching, security headers, canonical TLS redirects, metadata, and body limits. Inbox delivery for email signup still needs the account owner’s final check. The deployed application uses the Clerk production instance at `clerk.dsvv.live`. Local development keeps a separate development instance; live keys stay in VPS environment files.
 

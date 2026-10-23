@@ -79,3 +79,10 @@ The lead reviews before/after dates, protected specialist tasks, and assumptions
 The same approval workflow at a 390-pixel viewport, after a successful persisted reassignment.
 
 ![Mobile approval](screenshots/mobile-approval.png)
+
+
+## Teammate invitations
+
+Get invitation opens a dialog with a copy button, visible errors, and single-use sharing instructions. This component preview uses an intentionally invalid example code. Copy/paste and Escape dismissal were verified in Chrome.
+
+![Invitation dialog with an example code](screenshots/invitation-dialog.png)

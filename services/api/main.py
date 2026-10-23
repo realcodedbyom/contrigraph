@@ -522,6 +522,7 @@ class InviteRequest(BaseModel):
 @app.post('/projects/{pid}/invites')
 def create_invite(pid: str, body: InviteRequest, user=Depends(current_user)):
     with connect() as db:
+        db.execute('BEGIN IMMEDIATE')
         data, version, mid = load_project(db, pid, user['id'])
         require_lead(actor_for(data, mid))
         member = next((m for m in data['members'] if m['id'] == body.memberId), None)

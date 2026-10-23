@@ -82,6 +82,30 @@ def test_clerk_mode_cannot_create_legacy_sessions(client, clerk):
     assert client.get('/health').json()['identity'] == 'clerk'
     assert client.get('/health').json()['sandbox'] is False
 
+def test_clerk_invitation_for_new_teammate_regeneration_and_claim(client, clerk):
+    lead = {'Authorization': 'Bearer '+clerk()}
+    teammate = {'Authorization': 'Bearer '+clerk(sub='user_invited')}
+    pid = client.post('/projects', headers=lead, json={'name':'Invitation test','deadline':'2026-12-01'}).json()['id']
+    p = client.get('/projects/'+pid, headers=lead).json()
+    member = {'id':'new-teammate','name':'New teammate','skills':['testing']}
+    updated = client.post('/projects/'+pid+'/commands', headers=lead, json={'version':p['version'],'type':'member.save','payload':member})
+    assert updated.status_code == 200
+    version = updated.json()['version']
+    assert client.post('/projects/'+pid+'/invites', headers=lead, json={'version':p['version'],'memberId':member['id']}).status_code == 409
+    body = {'version':version,'memberId':member['id']}
+    first = client.post('/projects/'+pid+'/invites', headers=lead, json=body)
+    assert first.status_code == 200
+    second = client.post('/projects/'+pid+'/invites', headers=lead, json=body)
+    assert second.status_code == 200 and second.json()['code'] != first.json()['code']
+    assert client.post('/join', headers=teammate, json={'code':first.json()['code']}).status_code == 404
+    assert client.post('/join', headers=teammate, json={'code':second.json()['code']}).status_code == 200
+    assert client.get('/projects/'+pid, headers=teammate).json()['myMemberId'] == member['id']
+    assert client.post('/join', headers=teammate, json={'code':second.json()['code']}).status_code == 404
+    latest = client.get('/projects/'+pid, headers=lead).json()['version']
+    body['version'] = latest
+    assert client.post('/projects/'+pid+'/invites', headers=lead, json=body).status_code == 422
+    assert client.post('/projects/'+pid+'/invites', headers=teammate, json=body).status_code == 403
+
 @pytest.mark.parametrize('primary,status,expected', [('email_main','verified',True), ('email_main','unverified',False), ('missing','verified',False)])
 def test_verified_primary_email_required(monkeypatch, primary, status, expected):
     monkeypatch.setenv('CLERK_SECRET_KEY','unit-test-only')

@@ -23,6 +23,7 @@ import {
   WipSettings,
 } from "@/components/PlanningFeatures";
 import WorkspaceMotion from "@/components/WorkspaceMotion";
+import InvitationDialog from "@/components/InvitationDialog";
 import CountUp from "@/components/CountUp";
 import CornerButton from "@/components/CornerButton";
 import SkiperLink from "@/components/SkiperLink";
@@ -83,6 +84,7 @@ export default function Home({
     [modal, setModal] = useState(""),
     [task, setTask] = useState<Task | null>(null),
     [member, setMember] = useState<Member | null>(null),
+    [invitationCode, setInvitationCode] = useState(""),
     [modalVersion, setModalVersion] = useState(0),
     [scenario, setScenario] = useState<Scenario>({
       version: 1,
@@ -169,6 +171,22 @@ export default function Home({
     if (modal) setModalVersion(updated.version);
     setNotice("Saved to the project.");
   }
+  function getInvitation(target: Member) {
+    if (!p || busy) return;
+    setMember(target);
+    setInvitationCode("");
+    setModal("invite");
+    run(async () => {
+      const result = await post<{ code: string }>(
+        "/projects/" + p.id + "/invites",
+        {
+          version: p.version,
+          memberId: target.id,
+        },
+      );
+      setInvitationCode(result.code);
+    });
+  }
   const me = p?.data.members.find((m) => m.id === p.myMemberId),
     lead = me?.role === "lead";
   const name = (id: string) =>
@@ -242,7 +260,7 @@ export default function Home({
   return (
     <div className="cg-app">
       <WorkspaceMotion section={section} />
-      {error && modal && (
+      {error && modal && modal !== "invite" && (
         <div className="cg-toast" role="alert">
           {error}
           <button onClick={() => setError("")} aria-label="Dismiss">
@@ -732,21 +750,8 @@ export default function Home({
                             </button>
                             {!m.userId && (
                               <button
-                                onClick={() =>
-                                  run(async () => {
-                                    const r = await post<{ code: string }>(
-                                      "/projects/" + p.id + "/invites",
-                                      { version: p.version, memberId: m.id },
-                                    );
-                                    setNotice(
-                                      "Invitation for " +
-                                        m.name +
-                                        ": " +
-                                        r.code +
-                                        " · Share this single-use code with your teammate.",
-                                    );
-                                  })
-                                }
+                                disabled={busy}
+                                onClick={() => getInvitation(m)}
                               >
                                 Get invitation
                               </button>
@@ -1232,6 +1237,19 @@ export default function Home({
             </button>
           </form>
         </Modal>
+      )}
+      {modal === "invite" && member && (
+        <InvitationDialog
+          memberName={member.name}
+          code={invitationCode}
+          busy={busy}
+          error={error}
+          close={() => {
+            setModal("");
+            setInvitationCode("");
+          }}
+          retry={() => getInvitation(member)}
+        />
       )}
       {modal === "join" && (
         <Modal title="Join your team" close={() => setModal("")}>

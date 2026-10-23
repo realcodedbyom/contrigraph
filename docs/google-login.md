@@ -14,8 +14,12 @@ The API verifies short-lived RS256 Clerk session JWTs using its configured issue
 - Install Python requirements and web dependencies, build, then restart both services.
 - Keep the Clerk frontend API hostname in the nginx CSP. Include Clerk image hosts and challenge/protection hosts per the official CSP documentation. Update the hostname when switching to production keys.
 
-Clerk development keys are suitable for integration testing. A public production rollout needs the existing application’s production instance, domain/DNS setup, live keys, and production Google connection. Never place secret keys in frontend code, public files, or Git. Rotation should follow any credential exposure.
+The deployed application uses the production instance at `https://clerk.dsvv.live`, with live keys held in server environment files. Local development uses the separate Clerk development instance because production keys are restricted to the production domain. Never place secret keys in frontend code, public files, or Git. Rotate exposed keys through Clerk and update the server-only environment.
 
-The legacy API password and Supabase callback routes are disabled in Clerk mode. The server logout route clears old application cookies; the UI also signs out of Clerk. JWT verification is local, so a revoked token can remain valid until its short expiry. File downloads can use the same-origin Clerk session cookie.
+The legacy API password and Supabase callback routes are disabled in Clerk mode. The obsolete frontend callback bridge has been removed. Sign-out goes directly through Clerk, so it also works if the application API is temporarily unavailable. JWT verification is local, so a revoked token can remain valid until its short expiry. File downloads can use the same-origin Clerk session cookie.
 
 References: [Clerk React SDK](https://clerk.com/docs/reference/react/overview), [Clerk CSP](https://clerk.com/docs/guides/secure/best-practices/csp-headers), [production setup](https://clerk.com/docs/guides/development/deployment/production).
+
+## Production Google setup
+
+The existing Google Web OAuth client uses `https://clerk.dsvv.live/v1/oauth_callback` as its authorized redirect URI. Google and verified email are enabled in the production Clerk instance. Keep Google publishing status in production for access beyond test accounts. No extra OAuth scopes are required beyond OpenID, email, and basic profile.

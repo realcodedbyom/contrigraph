@@ -3,13 +3,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, GitBranch, ShieldCheck } from "@phosphor-icons/react";
 import { SignIn, SignUp } from "@clerk/react";
-import type { User } from "@/lib/types";
 import SignalShader from "./SignalShader";
 
-export default function AuthScreen(_props: {
-  onAuth: (u: User) => void;
-  sandbox: boolean;
-}) {
+export default function AuthScreen() {
   const [signup, setSignup] = useState(false);
   useEffect(() => {
     setSignup(new URLSearchParams(window.location.search).has("signup"));
@@ -124,6 +120,9 @@ export default function AuthScreen(_props: {
               signUpUrl={app + "?signup=1"}
             />
           )}
+          <p className="google-login-note">
+            <Link href="/privacy">How we handle your information</Link>
+          </p>
         </div>
       </section>
     </div>

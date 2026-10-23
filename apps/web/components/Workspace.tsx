@@ -22,7 +22,6 @@ import {
   ProgressUpdates,
   WipSettings,
 } from "@/components/PlanningFeatures";
-import AuthScreen from "@/components/AuthScreen";
 import WorkspaceMotion from "@/components/WorkspaceMotion";
 import CountUp from "@/components/CountUp";
 import CornerButton from "@/components/CornerButton";
@@ -66,12 +65,15 @@ const statuses = [
   "Deferred",
 ] as const;
 const uid = () => crypto.randomUUID();
-export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> }) {
+export default function Home({
+  onSignOut,
+}: {
+  onSignOut: () => Promise<void>;
+}) {
   const authStarted = useRef(false);
   const [user, setUser] = useState<User | null>(null),
     [ready, setReady] = useState(false),
     [projectLoading, setProjectLoading] = useState(true),
-    [sandbox, setSandbox] = useState(false),
     [projects, setProjects] = useState<{ id: string; name: string }[]>([]),
     [p, setP] = useState<Project | null>(null),
     [section, setSection] = useState("Overview"),
@@ -108,33 +110,13 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
     }
   }
   useEffect(() => {
-    // Strict Mode replays effects in development. Consume a confirmation only once.
+    // Strict Mode replays effects in development. Load the application identity once.
     if (authStarted.current) return;
     authStarted.current = true;
-    api<{ sandbox: boolean }>("/health")
-      .then((r) => setSandbox(r.sandbox))
-      .catch(() => {});
-    const confirmation = new URLSearchParams(window.location.hash.slice(1));
-    const accessToken = onSignOut ? null : confirmation.get("access_token");
-    const confirmationError = confirmation.get("error_description");
-    if (accessToken || confirmationError) {
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search,
-      );
-    }
-    if (confirmationError)
-      setError(
-        "Sign-in was not completed or the link expired. Please try Continue with Google again.",
-      );
-    (accessToken
-      ? post<User>("/auth/callback", { accessToken })
-      : api<User>("/auth/me")
-    )
+    api<User>("/auth/me")
       .then(setUser)
       .catch((e) => {
-        if (accessToken || e.status !== 401) setError(e.message);
+        setError(e.message);
       })
       .finally(() => setReady(true));
   }, []);
@@ -236,18 +218,25 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
     setSection("Recovery lab");
   };
   if (!ready) return <div className="cg-loading">Opening your workspace…</div>;
-  if (!user && onSignOut) return <div className="cg-loading"><div role="alert"><h2>We couldn’t open your workspace.</h2><p>{error || 'Your session could not be verified. Please sign in again.'}</p><button className="cg-btn" onClick={() => window.location.reload()}>Try again</button><button className="cg-text" onClick={onSignOut}>Sign out</button></div></div>;
   if (!user)
     return (
-      <>
-        <AuthScreen onAuth={setUser} sandbox={sandbox} />
-        {error && (
-          <div className="cg-toast" role="alert">
-            {error}
-          </div>
-        )}
-      </>
+      <div className="cg-loading">
+        <div role="alert">
+          <h2>We couldn’t open your workspace.</h2>
+          <p>
+            {error ||
+              "Your session could not be verified. Please sign in again."}
+          </p>
+          <button className="cg-btn" onClick={() => window.location.reload()}>
+            Try again
+          </button>
+          <button className="cg-text" onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
+      </div>
     );
+
   const a = p?.analysis,
     d = p?.data;
   return (
@@ -263,12 +252,25 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
         </div>
       )}
       <aside className="cg-sidebar">
-        <a className="cg-brand" href={process.env.NEXT_PUBLIC_APP_BASE_PATH || "/"}>
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
+        <a
+          className="cg-brand"
+          href={process.env.NEXT_PUBLIC_APP_BASE_PATH || "/"}
+        >
+          <span className="brand-mark" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
           <strong>contrigraph.</strong>
         </a>
         <span className="cg-caption">TEAM WORKSPACE</span>
-        <a className="workspace-help" href={(process.env.NEXT_PUBLIC_APP_BASE_PATH || '') + '/help/'}>Help & guides ↗</a>
+        <a
+          className="workspace-help"
+          href={(process.env.NEXT_PUBLIC_APP_BASE_PATH || "") + "/help/"}
+        >
+          Help & guides ↗
+        </a>
         <select
           aria-label="Select project"
           value={p?.id || ""}
@@ -317,8 +319,7 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
               aria-label="Sign out"
               onClick={() =>
                 run(async () => {
-                  await post("/auth/logout", {});
-                  await onSignOut?.();
+                  await onSignOut();
                   setP(null);
                   setUser(null);
                 })
@@ -578,13 +579,21 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
               )}
               {section === "Across projects" && <CrossProjectWorkload />}
               {section === "Progress updates" && (
-                <ProgressUpdates key={`updates-${p.id}`} project={p} onSaved={setP} />
+                <ProgressUpdates
+                  key={`updates-${p.id}`}
+                  project={p}
+                  onSaved={setP}
+                />
               )}
               {section === "Task board" && (
                 <WipSettings key={`wip-${p.id}`} project={p} onSaved={setP} />
               )}
               {section === "Task board" && (
-                <TaskBoard key={`board-${p.id}`} project={p} openTask={openTask} />
+                <TaskBoard
+                  key={`board-${p.id}`}
+                  project={p}
+                  openTask={openTask}
+                />
               )}
               {section === "Dependencies" && (
                 <section className="cg-panel">
@@ -1718,8 +1727,16 @@ export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> })
               <h2>Attachments</h2>
               {(d.tasks.find((t) => t.id === task.id)?.files || []).map((f) => (
                 <p key={f.id}>
-                  <a href={(process.env.NEXT_PUBLIC_APP_BASE_PATH || "") + "/api/files/" + f.id}>{f.name}</a> ·{" "}
-                  {Math.ceil(f.size / 1024)} KB
+                  <a
+                    href={
+                      (process.env.NEXT_PUBLIC_APP_BASE_PATH || "") +
+                      "/api/files/" +
+                      f.id
+                    }
+                  >
+                    {f.name}
+                  </a>{" "}
+                  · {Math.ceil(f.size / 1024)} KB
                 </p>
               ))}
               <Field label="Attach PDF, image, TXT or CSV (up to 5 MB)">

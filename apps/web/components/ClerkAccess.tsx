@@ -50,7 +50,7 @@ export function ClerkWorkspace() {
         Opening your workspace…
       </div>
     );
-  if (!isSignedIn) return <AuthScreen onAuth={() => {}} sandbox={false} />;
+  if (!isSignedIn) return <AuthScreen />;
   return (
     <Workspace
       key={sessionId}

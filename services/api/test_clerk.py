@@ -80,6 +80,7 @@ def test_clerk_mode_cannot_create_legacy_sessions(client, clerk):
     assert client.post('/auth/sandbox').status_code == 404
     assert client.get('/auth/providers').json()['provider'] == 'clerk'
     assert client.get('/health').json()['identity'] == 'clerk'
+    assert client.get('/health').json()['sandbox'] is False
 
 @pytest.mark.parametrize('primary,status,expected', [('email_main','verified',True), ('email_main','unverified',False), ('missing','verified',False)])
 def test_verified_primary_email_required(monkeypatch, primary, status, expected):

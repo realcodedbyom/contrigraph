@@ -10,7 +10,7 @@ Milestone progress, remaining effort, skill risks, and a reviewed recovery path.
 
 ## Sign in
 
-Google and verified email authentication through Clerk. Captured on the live site using the current development instance.
+Google and verified email authentication through Clerk. Captured on the live site using the production Clerk instance.
 
 ![Sign in](screenshots/clerk-login.png)
 

@@ -35,3 +35,12 @@ React and React DOM are pinned to released package versions. Next's App Router m
 Public product interactions use existing React Bits CountUp, GSAP, Lenis, Vengeance CornerButton, Skiper links, and an original WebGL shader. Reduced-motion preferences disable smooth scrolling and decorative animation. The recovery demo is explicitly illustrative and cannot change real project data.
 
 Set `NEXT_PUBLIC_SPLINE_SCENE` at build time to an authorized published embed URL on `https://my.spline.design/` to offer the optional, click-to-load Spline scene. No scene was supplied, so the original shader is the live visual. A placeholder third-party scene is not silently embedded.
+
+
+## Production authentication rollout: October 24, 2026
+
+The VPS now uses the Clerk production issuer `https://clerk.dsvv.live` and live keys held only in ignored environment files. Domain TLS and JWKS were checked from both the workstation and VPS. Google is enabled in Clerk, and its existing Google OAuth app was published with corrected branding, the production callback, and the public privacy page. Email verification remains required.
+
+Removed the obsolete frontend Supabase callback bridge, password-login fallback UI, and unused Supabase Auth environment settings. Supabase PostgreSQL remains the project database. Temporary deployment payloads, old build directories, and obsolete credential backups are removed after the production smoke checks.
+
+Both the local and VPS builds passed, and 109 backend tests passed. Public smoke checks cover production Clerk settings, Google/email availability, unauthorized access, callback noindex, caching, TLS, headers, metadata, and request body limits. Production Google sign-in opened an authenticated workspace. Inbox delivery for email signup remains the account owner’s final check. GitHub Actions remains externally blocked by the account billing lock.

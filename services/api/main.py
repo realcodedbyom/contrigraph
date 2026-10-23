@@ -123,7 +123,7 @@ async def supabase_auth(path, payload):
 def health_check():
     with connect() as db:
         db.execute('SELECT id FROM users LIMIT 0')
-    return {'status': 'ok', 'database': database_kind(), 'identity': 'clerk' if os.environ.get('AUTH_MODE') == 'clerk' else ('supabase' if cloud() else 'local'), 'sandbox': os.environ.get('ENABLE_SANDBOX') == 'true'}
+    return {'status': 'ok', 'database': database_kind(), 'identity': 'clerk' if os.environ.get('AUTH_MODE') == 'clerk' else ('supabase' if cloud() else 'local'), 'sandbox': os.environ.get('ENABLE_SANDBOX') == 'true' and os.environ.get('AUTH_MODE') != 'clerk'}
 
 
 @app.get('/auth/me')

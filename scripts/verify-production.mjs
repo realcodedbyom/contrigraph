@@ -1,7 +1,7 @@
 // Read-only production smoke checks. Never creates users or sends mail.
 import assert from 'node:assert/strict';
 const origin = 'https://dsvv.live';
-const paths = ['/', '/robots.txt', '/sitemap.xml', '/contrigraph/', '/contrigraph/help/', '/contrigraph/app/', '/contrigraph/favicon.svg', '/contrigraph/robots.txt', '/contrigraph/sitemap.xml', '/contrigraph/api/health'];
+const paths = ['/', '/robots.txt', '/sitemap.xml', '/contrigraph/', '/contrigraph/help/', '/contrigraph/privacy/', '/contrigraph/app/', '/contrigraph/favicon.svg', '/contrigraph/robots.txt', '/contrigraph/sitemap.xml', '/contrigraph/api/health'];
 const responses = await Promise.all(paths.map(async path => {
   const response = await fetch(origin + path, { signal: AbortSignal.timeout(20000) });
   assert.equal(response.status, path === '/' ? 204 : 200, path);
@@ -10,6 +10,12 @@ const responses = await Promise.all(paths.map(async path => {
   return [path, response, await response.text()];
 }));
 const [, homepage, html] = responses.find(([path]) => path === '/contrigraph/');
+const health = JSON.parse(responses.find(([path]) => path === '/contrigraph/api/health')[2]);
+assert.equal(health.identity, 'clerk');
+assert.equal(health.database, 'postgres');
+assert.equal(health.sandbox, false);
+assert.match(homepage.headers.get('content-security-policy'), /https:\/\/clerk\.dsvv\.live/);
+assert.doesNotMatch(homepage.headers.get('content-security-policy'), /clerk\.accounts\.dev/);
 assert.match(homepage.headers.get('cache-control'), /no-cache/);
 assert.equal(homepage.headers.get('x-powered-by'), null);
 assert.match(html, /A shared plan/);
@@ -30,4 +36,15 @@ assert.equal(new URL(alias.headers.get('location'), origin).pathname, '/contrigr
 const body = await fetch(origin + '/contrigraph/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(17000) });
 assert.equal(body.status, 413);
 assert.equal((await body.json()).detail, 'Request too large.');
-console.log(`${paths.length} public routes passed; HTML/static caching, TLS canonical host, headers, metadata, login alias, and auth body limit passed.`);
+const me = await fetch(origin + '/contrigraph/api/auth/me');
+assert.equal(me.status, 401);
+const settings = await fetch('https://clerk.dsvv.live/v1/environment', { signal: AbortSignal.timeout(20000) });
+assert.equal(settings.status, 200);
+const identity = await settings.json();
+assert.equal(identity.display_config.instance_environment_type, 'production');
+assert.equal(identity.user_settings.attributes.email_address.verify_at_sign_up, true);
+assert.equal(identity.user_settings.social.oauth_google.enabled, true);
+const callback = await fetch(origin + '/contrigraph/app/sso-callback/');
+assert.equal(callback.status, 200);
+assert.match(await callback.text(), /noindex/);
+console.log(`${paths.length} public routes passed; production Clerk, Google/email settings, unauthorized access, callback indexing, caching, TLS, headers, metadata, alias, and body limit passed.`);

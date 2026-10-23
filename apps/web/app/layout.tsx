@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   openGraph: { type: "website", url: siteUrl, siteName: "ContriGraph", title: "ContriGraph | Intelligent project management", description: "Make teamwork visible with skill-aware planning, joint workload schedules, and explainable delivery forecasts.", images: [{ url: "/contrigraph/og-image.svg", width: 1200, height: 630, alt: "ContriGraph project planning workspace" }] },
   twitter: { card: "summary_large_image", title: "ContriGraph | Intelligent project management", description: "Plan work, balance capacity, and understand every contribution.", images: ["/contrigraph/og-image.svg"] },
   robots: { index: true, follow: true },
+  verification: { google: "pKzuRuF1pI6pjW6jGAI4_P4vor89xp19ZdBCNHw6-Dw" },
   manifest: "/contrigraph/site.webmanifest",
   icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }], apple: "/favicon.svg" },
 };

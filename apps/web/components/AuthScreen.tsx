@@ -17,6 +17,7 @@ export default function AuthScreen({
   sandbox: boolean;
 }) {
   const [register, setRegister] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -97,6 +98,7 @@ export default function AuthScreen({
                   Object.fromEntries(d),
                 );
                 if (result.confirmationRequired) {
+                  setConfirmationSent(true);
                   setMessage(
                     result.message || "Confirm your email, then sign in.",
                   );
@@ -160,7 +162,7 @@ export default function AuthScreen({
               <ArrowRight size={16} />
             </button>
           </form>
-          {!register && (
+          {!register && confirmationSent && (
             <button
               className="cg-text"
               disabled={busy}
@@ -228,10 +230,6 @@ export default function AuthScreen({
               </p>
             </>
           )}
-          <div className="auth-security">
-            <ShieldCheck size={16} />
-            <span>Supabase identity · Secure server sessions</span>
-          </div>
         </div>
       </section>
     </div>

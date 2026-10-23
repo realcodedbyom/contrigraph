@@ -17,3 +17,4 @@ data/
 .openai/
 *.log
 proto/
+.deploy-*.tgz

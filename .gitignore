@@ -16,3 +16,4 @@ data/
 .agents/skills/
 .openai/
 *.log
+proto/

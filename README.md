@@ -8,7 +8,7 @@ ContriGraph makes workload visible across projects and previews safe recovery de
 
 [Setup](#run-locally) · [Screenshot gallery](docs/SCREENSHOTS.md) · [Scheduling research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md)
 
-The original browser-only prototype is preserved in **`proto/`**. The main application is **`apps/web/` + `services/api/`**.
+The main application is **`apps/web/` + `services/api/`**. The older browser-only prototype is kept outside this public repository.
 
 ## Run locally
 
@@ -101,7 +101,6 @@ For larger production deployment: add distributed auth rate limiting, operationa
 - `services/api/test_platform.py`: regression suite.
 - `docs/RESEARCH.md`: source-based scheduling and contribution decisions.
 - `docs/DESIGN-SOURCES.md`: component sources and licensing.
-- `proto/`: preserved original prototype.
 
 React Bits, GSAP, Lenis, free Skiper UI, Vengeance UI and an original WebGL shader are integrated. Animmaster's paid source is not bundled without a licensed pack.
 

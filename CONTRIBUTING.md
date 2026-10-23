@@ -1,6 +1,6 @@
 # Contributing
 
-Start with the setup in [README](README.md). Keep changes in `apps/web` and `services/api`; `proto` preserves the original browser prototype.
+Start with the setup in [README](README.md). Keep changes in `apps/web` and `services/api`.
 
 Before submitting a change, run `npm test` and `npm run build`. Add regression tests for scheduling, permission, persistence, or approval behavior. Use isolated test data for browser checks.
 

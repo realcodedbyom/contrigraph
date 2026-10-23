@@ -14,14 +14,14 @@ export default function ProductPage() {
         <section className="public-hero">
           <div>
             <h1>
-              A shared plan.
+              Know what’s next.
               <br />
-              Room for <span>everyone.</span>
+              Plan for <span>everyone.</span>
             </h1>
             <p className="public-lead">
-              For student teams with big plans and shared deadlines. See the
-              workload, protect your specialists, and build a plan everyone can
-              deliver.
+              For small software teams with shared deadlines. Find your tasks,
+              ask for help, and test workload changes before your lead approves
+              them. Keep the plan realistic when only one person has the skill.
             </p>
             <div className="public-hero-actions">
               <Link className="public-button" href="/app?signup=1">

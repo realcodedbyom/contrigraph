@@ -359,10 +359,15 @@ def command(pid: str, body: Command, user=Depends(current_user)):
         actor = actor_for(data, mid)
         p = body.payload
         kind, task_id, text, meta = 'updated', '', '', {}
-        if body.type == 'task.save':
+        if body.type in ['task.archive', 'task.restore', 'request.create', 'request.respond', 'request.cancel']:
+            from team_workflows import apply_team_command
+            kind, task_id, text, meta = apply_team_command(data, actor, body.type, p)
+        elif body.type == 'task.save':
             require_lead(actor)
             task = Task.model_validate(p).model_dump(mode='json')
             old = next((t for t in data['tasks'] if t['id'] == task['id']), None)
+            if not old and any(r['task']['id'] == task['id'] for r in data.get('archivedTasks', [])):
+                raise HTTPException(422, 'This task is archived. Restore it instead of reusing its identifier.')
             if (old and old['status'] != task['status']) or (not old and task['status'] != 'To do'):
                 raise HTTPException(422, 'Save new tasks as To do. Use status, submission, approval, or scope actions for transitions.')
             if old and old['status'] == 'Done':
@@ -382,6 +387,21 @@ def command(pid: str, body: Command, user=Depends(current_user)):
             else:
                 data['tasks'].append(task)
             kind, task_id, text = ('updated' if old else 'created'), task['id'], ('updated ' if old else 'created ') + task['title']
+        elif body.type == 'task.progress':
+            if set(p) != {'taskId', 'remaining'}:
+                raise HTTPException(422, 'Provide only the task and remaining hours.')
+            task = next((t for t in data['tasks'] if t['id'] == p['taskId']), None)
+            if not task:
+                raise HTTPException(404, 'Task not found.')
+            if actor['role'] != 'lead' and task['owner'] != mid:
+                raise HTTPException(403, 'You can only update your own assigned work.')
+            if task['status'] not in ['To do', 'In progress']:
+                raise HTTPException(422, 'Only active, unsubmitted work can have its estimate updated.')
+            if isinstance(p['remaining'], bool) or not isinstance(p['remaining'], (int, float)):
+                raise HTTPException(422, 'Remaining hours must be a number.')
+            previous = task['remaining']
+            task['remaining'] = p['remaining']
+            kind, task_id, text, meta = 'progress', task['id'], 'updated remaining effort for ' + task['title'], {'before': previous, 'remaining': p['remaining']}
         elif body.type in ['task.status', 'task.approve']:
             task = next((t for t in data['tasks'] if t['id'] == p.get('taskId')), None)
             if not task:
@@ -418,6 +438,8 @@ def command(pid: str, body: Command, user=Depends(current_user)):
                     if task['blocker']:
                         raise HTTPException(422, 'Resolve the blocker before starting or submitting work.')
                 remaining = p.get('remaining', task['remaining'])
+                if task['status'] == 'In review' and status == 'In review' and remaining != task['remaining']:
+                    raise HTTPException(422, 'Return submitted work to In progress before changing remaining effort.')
                 task.update(status=status, remaining=remaining)
                 if status == 'In review':
                     task['submittedBy'] = mid

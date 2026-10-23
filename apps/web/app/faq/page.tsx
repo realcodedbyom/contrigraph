@@ -17,6 +17,18 @@ export const metadata: Metadata = {
 };
 const questions = [
   {
+    id: "my-work",
+    question: "Where do I find my tasks and ask for help?",
+    answer:
+      "Your workspace opens on My work, showing tasks assigned to your linked team profile. Open a task to update remaining hours, report a blocker, or submit work for review. Use Ask the team lead for help, a deadline change, reassignment, new work, or archiving. Responses stay in Team requests and appear in My work. Requests are visible to the project team.",
+  },
+  {
+    id: "archive",
+    question: "Can I remove a task from the plan?",
+    answer:
+      "Leads can archive an unfinished task with a reason and restore it later. Its comments and attachments are retained. Resolve open requests and replan dependent tasks first. Work submitted for review must be returned to In progress before archiving; accepted work remains in contribution history. Members can request archiving from their lead.",
+  },
+  {
     id: "accounts",
     question: "How do I log in or create an account?",
     answer:
@@ -44,7 +56,7 @@ const questions = [
     id: "specialists",
     question: "What if only one team member has the required skill?",
     answer:
-      "ContriGraph identifies single-specialist tasks and keeps qualified ownership. It can propose moving other eligible work away from the specialist. If capacity is still insufficient, your team can test sequencing, scope, or deadline changes in the Recovery lab rather than assigning the task to an unqualified person.",
+      "ContriGraph identifies single-specialist tasks and keeps qualified ownership. It can propose moving other eligible work away from the specialist. If capacity is still insufficient, your team can test sequencing, scope, or deadline changes in the What-if simulator rather than assigning the task to an unqualified person.",
   },
   {
     id: "approval",

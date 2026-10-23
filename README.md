@@ -2,9 +2,9 @@
 
 Project planning for student teams where skills, dependencies, and shared capacity determine what can actually ship.
 
-ContriGraph makes workload visible across projects and previews safe recovery decisions before a lead approves them. When only one teammate has a required skill, that specialist keeps the task while compatible side work can move.
+ContriGraph gives each member a clear daily task list, records requests and lead responses, and previews workload changes before a lead approves them. When only one teammate has a required skill, that specialist keeps the task while compatible side work can move.
 
-![ContriGraph project overview](docs/screenshots/overview.png)
+![My work with assigned tasks and requests, using isolated QA data](docs/screenshots/my-work.png)
 
 [Setup](#run-locally) · [Screenshot gallery](docs/SCREENSHOTS.md) · [Scheduling research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md)
 
@@ -30,6 +30,9 @@ On macOS/Linux, activate the virtual environment with `source services/api/.venv
 
 ## What works
 
+- My work opens by default with assigned tasks, remaining effort, deadlines, blockers and recent request replies. Navigation scrolls independently on laptops and collapses behind a project menu on mobile.
+- Task-linked team requests for help, deadline changes, reassignment, new work and archiving. Leads respond with a recorded decision; responses do not silently change the plan. Requests are visible to the project team.
+- Lead-only task archive and restore, preserving comments and attachments. Dependent work and open requests must be resolved first; accepted work remains in contribution history.
 - Google and verified email registration/sign-in through Clerk. FastAPI verifies session signatures, issuer, expiry, and allowed origin before authorizing project access. Legacy local accounts remain available for isolated development tests only.
 - Project creation, membership invitations, lead/member/reviewer permissions, milestones, deadlines, priorities, task estimates, and remaining effort.
 - Task planning, prerequisite editing, cycle rejection, status transitions, reviewer acceptance, comments, evidence categories, file uploads/downloads, and append-only activity history.
@@ -44,7 +47,7 @@ On macOS/Linux, activate the virtual environment with `source services/api/.venv
 
 ## The single-specialist case
 
-A task requiring skills possessed by only one teammate stays with that specialist. The engine looks for their compatible, unlocked, unstarted side work that another teammate can take. Each candidate gets a full calendar/dependency resimulation. If no safe reassignment exists, the recovery lab allows explicit sequencing, scope, or deadline decisions. Training and pairing do not magically create qualification or reduce estimates.
+A task requiring skills possessed by only one teammate stays with that specialist. The engine looks for their compatible, unlocked, unstarted side work that another teammate can take. Each candidate gets a full calendar/dependency resimulation. If no safe reassignment exists, the What-if simulator allows explicit sequencing, scope, or deadline decisions. Training and pairing do not magically create qualification or reduce estimates.
 
 No qualified member, an unresolved blocker without a date, or insufficient capacity makes the delivery forecast **unknown**. Deferral removes affected downstream scope; it is never counted as completed work.
 
@@ -92,7 +95,8 @@ For larger production deployment: add distributed auth rate limiting, operationa
 
 ## Structure
 
-- `apps/web/app/page.tsx`: workspace orchestration and role-aware workflows.
+- `apps/web/app/page.tsx`: public product page.
+- `apps/web/components/Workspace.tsx`: workspace orchestration and role-aware workflows.
 - `apps/web/components/`: reusable UI, auth, motion and shader components.
 - `services/api/main.py`: authenticated API and command authorization.
 - `services/api/engine.py`: calendar scheduling, skill coverage, and recovery simulation.
@@ -140,4 +144,4 @@ Search checks at most 40 eligible pairs, displays up to eight suggestions, and i
 
 ![Safe redistribution preview](docs/screenshots/redistribution-preview.png)
 
-See the [complete screenshot gallery](docs/SCREENSHOTS.md) for the board, dependencies, skill coverage, contributions, progress updates, recovery lab, and mobile workflow. Screenshots use sample data; they are illustrative, not a hosted demo.
+See the [complete screenshot gallery](docs/SCREENSHOTS.md) for the board, dependencies, skill coverage, contributions, progress updates, What-if simulator, and mobile workflow. Screenshots use sample data; they are illustrative, not a hosted demo.

@@ -47,7 +47,7 @@ assert.doesNotMatch(
 );
 assert.match(homepage.headers.get("cache-control"), /no-cache/);
 assert.equal(homepage.headers.get("x-powered-by"), null);
-assert.match(html, /A shared plan/);
+assert.match(html, /Know what/);
 assert.match(html, /application\/ld\+json/);
 assert.match(html, /og:title/);
 assert.match(html, /rel="canonical"/);

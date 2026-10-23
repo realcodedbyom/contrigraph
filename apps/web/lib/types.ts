@@ -49,6 +49,13 @@ export type Task = {
   files: { id: string; name: string; size: number; mediaType: string }[];
 };
 export type ProjectData = {
+  requests?: TeamRequest[];
+  archivedTasks?: {
+    task: Task;
+    archivedBy: string;
+    archivedAt: string;
+    reason: string;
+  }[];
   updates: {
     id: string;
     author: string;
@@ -66,6 +73,24 @@ export type ProjectData = {
   members: Member[];
   tasks: Task[];
   milestones: { id: string; name: string; due: string }[];
+};
+export type TeamRequest = {
+  id: string;
+  author: string;
+  taskId: string;
+  category:
+    | "Help"
+    | "Deadline change"
+    | "Reassignment"
+    | "New task"
+    | "Archive task"
+    | "Other";
+  message: string;
+  status: "Open" | "Resolved" | "Declined" | "Cancelled";
+  createdAt: string;
+  response: string;
+  respondedBy: string;
+  respondedAt: string;
 };
 export type Forecast = {
   asOf: string;

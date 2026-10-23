@@ -4,9 +4,17 @@ Captured from the running main application using isolated sample workspaces. No 
 
 ## Project overview
 
+The older overview image below predates the task-first navigation update.
+
 Milestone progress, remaining effort, skill risks, and a reviewed recovery path.
 
 ![Project overview](screenshots/overview.png)
+
+## My work and everyday requests
+
+The current workspace opens on assigned tasks. Members can update remaining effort, report blockers, submit work for review, and request a lead decision. The sidebar fits a normal desktop viewport and scrolls independently when expanded. This screenshot uses an isolated QA account; older gallery images show earlier navigation.
+
+![My work](screenshots/my-work.png)
 
 ## Sign in
 

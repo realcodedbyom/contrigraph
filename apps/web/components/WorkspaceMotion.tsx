@@ -9,7 +9,7 @@ export default function WorkspaceMotion({ section }: { section: string }) {
       autoRaf: true,
       duration: 0.65,
       prevent: (node) =>
-        Boolean(node.closest(".cg-dialog,.cg-board,.cg-graph,.cg-scroll")),
+        Boolean(node.closest(".cg-sidebar,.cg-dialog,.cg-board,.cg-graph,.cg-scroll")),
     });
     return () => lenis.destroy();
   }, []);

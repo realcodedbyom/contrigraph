@@ -17,6 +17,13 @@ import {
 import { Modal, Field, LoadTable } from "@/components/WorkspaceUI";
 import { dependencyPositions } from "@/lib/graph";
 import TaskBoard from "@/components/TaskBoard";
+import TaskQuickActions from "@/components/TaskQuickActions";
+import {
+  MyWork,
+  RequestComposer,
+  TeamRequests,
+  TaskArchive,
+} from "@/components/DailyWork";
 import {
   CrossProjectWorkload,
   ProgressUpdates,
@@ -25,7 +32,6 @@ import {
 import WorkspaceMotion from "@/components/WorkspaceMotion";
 import InvitationDialog from "@/components/InvitationDialog";
 import CountUp from "@/components/CountUp";
-import CornerButton from "@/components/CornerButton";
 import SkiperLink from "@/components/SkiperLink";
 import { api, post, download, ApiError } from "@/lib/api";
 import {
@@ -47,8 +53,10 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 const sections = [
+  ["My work", Kanban],
   ["Overview", SquaresFour],
   ["Task board", Kanban],
+  ["Team requests", ClockCounterClockwise],
   ["Dependencies", GitBranch],
   ["Team & workload", Users],
   ["Across projects", ChartBar],
@@ -56,7 +64,8 @@ const sections = [
   ["Skill coverage", ShieldCheck],
   ["Contributions", ChartBar],
   ["Activity", ClockCounterClockwise],
-  ["Recovery lab", Flask],
+  ["What-if simulator", Flask],
+  ["Archived tasks", ClockCounterClockwise],
 ] as const;
 const statuses = [
   "To do",
@@ -77,7 +86,11 @@ export default function Home({
     [projectLoading, setProjectLoading] = useState(true),
     [projects, setProjects] = useState<{ id: string; name: string }[]>([]),
     [p, setP] = useState<Project | null>(null),
-    [section, setSection] = useState("Overview"),
+    [section, setSection] = useState("My work"),
+    [mobileNavOpen, setMobileNavOpen] = useState(false),
+    [boardView, setBoardView] = useState("All tasks"),
+    [requestTask, setRequestTask] = useState(""),
+    [archiveReason, setArchiveReason] = useState(""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -166,6 +179,9 @@ export default function Home({
           : p.version,
       type,
       payload,
+    }).catch(async (e) => {
+      if (e instanceof ApiError && e.status === 409) await refresh();
+      throw e;
     });
     setP(updated);
     if (modal) setModalVersion(updated.version);
@@ -233,8 +249,65 @@ export default function Home({
       reason: "",
     });
     setSimulation(null);
-    setSection("Recovery lab");
+    setSection("What-if simulator");
   };
+  const askLead = (id = "") => {
+    setRequestTask(id);
+    setModal("request");
+  };
+  const goBoard = (view = "All tasks") => {
+    setBoardView(view);
+    setSection("Task board");
+  };
+  const primarySections = [
+    "My work",
+    "Overview",
+    "Task board",
+    "Team requests",
+    "Team & workload",
+    "Across projects",
+    "What-if simulator",
+  ];
+  const navButton = ([title, Icon]: (typeof sections)[number]) => (
+    <button
+      key={title}
+      className={section === title ? "active" : ""}
+      aria-current={section === title ? "page" : undefined}
+      onClick={() => {
+        if (title === "Task board") setBoardView("All tasks");
+        setSection(title);
+        setMobileNavOpen(false);
+      }}
+    >
+      <Icon size={19} />
+      {title}
+      {title === "Team requests" &&
+        !!p?.data.requests?.filter(
+          (r) => r.status === "Open" && (lead || r.author === p.myMemberId),
+        ).length && (
+          <small>
+            {
+              p.data.requests.filter(
+                (r) =>
+                  r.status === "Open" && (lead || r.author === p.myMemberId),
+              ).length
+            }
+          </small>
+        )}
+      {title === "My work" && !!p && (
+        <small>
+          {
+            p.data.tasks.filter(
+              (t) =>
+                t.owner === p.myMemberId &&
+                t.status !== "Done" &&
+                !p.analysis.forecast.excluded.includes(t.id),
+            ).length
+          }
+        </small>
+      )}
+    </button>
+  );
   if (!ready) return <div className="cg-loading">Opening your workspace…</div>;
   if (!user)
     return (
@@ -269,7 +342,11 @@ export default function Home({
           </button>
         </div>
       )}
-      <aside className="cg-sidebar">
+      <aside
+        className={"cg-sidebar" + (mobileNavOpen ? " cg-nav-open" : "")}
+        aria-label="Workspace navigation"
+        data-lenis-prevent
+      >
         <a
           className="cg-brand"
           href={process.env.NEXT_PUBLIC_APP_BASE_PATH || "/"}
@@ -303,22 +380,31 @@ export default function Home({
             </option>
           ))}
         </select>
-        <nav>
-          {sections.map(([title, Icon]) => (
-            <button
-              key={title}
-              className={section === title ? "active" : ""}
-              onClick={() => setSection(title)}
-            >
-              <Icon size={19} />
-              {title}
-              {title === "Skill coverage" && !!a?.skillRisks.length && (
-                <small>{a.skillRisks.length}</small>
-              )}
-            </button>
-          ))}
+        <button
+          className="cg-mobile-menu"
+          aria-expanded={mobileNavOpen}
+          aria-controls="project-navigation project-account"
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+        >
+          {mobileNavOpen ? "Close menu" : "Project menu"}
+          <span>{section}</span>
+        </button>
+        <nav
+          id="project-navigation"
+          aria-label="Project sections"
+          data-lenis-prevent
+        >
+          {sections
+            .filter(([title]) => primarySections.includes(title))
+            .map(navButton)}
+          <details className="cg-more-nav">
+            <summary>More project views</summary>
+            {sections
+              .filter(([title]) => !primarySections.includes(title))
+              .map(navButton)}
+          </details>
         </nav>
-        <div className="cg-sidebar-bottom">
+        <div className="cg-sidebar-bottom" id="project-account">
           <button onClick={() => setModal("project")}>
             <Plus size={16} />
             Create project
@@ -425,19 +511,29 @@ export default function Home({
                   <span className="cg-caption">{d.name.toUpperCase()}</span>
                   <h1>
                     {section === "Overview"
-                      ? "Every contribution. A clearer picture."
+                      ? "Your project at a glance."
                       : section}
                   </h1>
                   <p>
                     {section === "Overview"
                       ? d.description
-                      : "A shared source of truth for the work ahead."}
+                      : section === "My work"
+                        ? "Your assigned work, deadlines, and next steps."
+                        : section === "Team requests"
+                          ? "Ask for a decision. Keep the response with the work."
+                          : section === "What-if simulator"
+                            ? "Try changes to assignments, capacity, scope, or dates before approving a new plan."
+                            : "Plan, update, and review your team’s work."}
                   </p>
                 </div>
-                {lead && (
+                {lead ? (
                   <button className="cg-primary" onClick={newTask}>
                     <Plus size={17} />
                     New task
+                  </button>
+                ) : (
+                  <button className="cg-primary" onClick={() => askLead()}>
+                    Ask the team lead
                   </button>
                 )}
               </div>
@@ -456,6 +552,28 @@ export default function Home({
                   </button>
                 )}
               </div>
+              {section === "My work" && (
+                <MyWork
+                  key={p.id}
+                  project={p}
+                  openTask={openTask}
+                  requestHelp={askLead}
+                  showBoard={() => goBoard()}
+                  showRequests={() => setSection("Team requests")}
+                />
+              )}
+              {section === "Team requests" && (
+                <TeamRequests
+                  key={p.id}
+                  project={p}
+                  command={command}
+                  compose={() => askLead()}
+                  openTask={openTask}
+                />
+              )}
+              {section === "Archived tasks" && (
+                <TaskArchive key={p.id} project={p} command={command} />
+              )}
               {section === "Overview" && (
                 <>
                   <div className="cg-metrics">
@@ -507,31 +625,66 @@ export default function Home({
                       </div>
                     ))}
                   </div>
-                  <div className="cg-feature">
-                    <div>
-                      <span className="cg-caption">THE NEXT BEST MOVE</span>
-                      <h2>
-                        {a.recommendations[0]?.title ||
-                          "Protect the work only one person can do."}
-                      </h2>
-                      <p>
-                        {a.recommendations[0]?.reason ||
-                          "Keep specialist ownership. Review their other work, order dependencies, and test scope or deadline changes when capacity cannot recover delivery."}
-                      </p>
-                    </div>
-                    <CornerButton
-                      accentColor="#d56840"
-                      icon={<ArrowRight size={18} />}
-                      onClick={() =>
-                        openScenario(
-                          a.recommendations[0]?.taskId,
-                          a.recommendations[0]?.memberId,
-                        )
-                      }
-                    >
-                      Test a recovery
-                    </CornerButton>
-                  </div>
+                  <section className="cg-panel cg-overview-actions">
+                    <h2>Move the work forward</h2>
+                    <button onClick={() => setSection("My work")}>
+                      <strong>Your tasks</strong>
+                      <span>
+                        {
+                          d.tasks.filter(
+                            (t) =>
+                              t.owner === p.myMemberId &&
+                              t.status !== "Done" &&
+                              !a.forecast.excluded.includes(t.id),
+                          ).length
+                        }{" "}
+                        active · Open your work →
+                      </span>
+                    </button>
+                    <button onClick={() => setSection("Team requests")}>
+                      <strong>
+                        {lead
+                          ? "Requests awaiting your response"
+                          : "Requests to your lead"}
+                      </strong>
+                      <span>
+                        {
+                          (d.requests || []).filter(
+                            (r) =>
+                              r.status === "Open" &&
+                              (lead || r.author === p.myMemberId),
+                          ).length
+                        }{" "}
+                        open · View requests →
+                      </span>
+                    </button>
+                    <button onClick={() => goBoard("Review queue")}>
+                      <strong>Work awaiting review</strong>
+                      <span>
+                        {d.tasks.filter((t) => t.status === "In review").length}{" "}
+                        tasks · Review queue →
+                      </span>
+                    </button>
+                    <button onClick={() => goBoard("Blocked")}>
+                      <strong>Work that cannot move forward</strong>
+                      <span>See blockers and unfinished prerequisites →</span>
+                    </button>
+                    {lead && (
+                      <button onClick={() => goBoard("Unassigned")}>
+                        <strong>Tasks without an owner</strong>
+                        <span>
+                          {
+                            d.tasks.filter(
+                              (t) =>
+                                !t.owner &&
+                                !["Done", "Deferred"].includes(t.status),
+                            ).length
+                          }{" "}
+                          tasks · Assign qualified owners →
+                        </span>
+                      </button>
+                    )}
+                  </section>
                   <div className="cg-two">
                     <section className="cg-panel">
                       <h2>Milestones</h2>
@@ -608,9 +761,10 @@ export default function Home({
               )}
               {section === "Task board" && (
                 <TaskBoard
-                  key={`board-${p.id}`}
+                  key={`board-${p.id}-${boardView}`}
                   project={p}
                   openTask={openTask}
+                  initialView={boardView}
                 />
               )}
               {section === "Dependencies" && (
@@ -935,7 +1089,7 @@ export default function Home({
                   ))}
                 </section>
               )}
-              {section === "Recovery lab" && (
+              {section === "What-if simulator" && (
                 <div className="cg-two">
                   <section className="cg-panel">
                     <span className="cg-caption">
@@ -979,7 +1133,19 @@ export default function Home({
                             "deadline",
                             "availability",
                           ].map((k) => (
-                            <option key={k}>{k}</option>
+                            <option key={k} value={k}>
+                              {
+                                (
+                                  {
+                                    reassign: "Reassign a task",
+                                    prioritize: "Change task priority",
+                                    defer: "Defer a task",
+                                    deadline: "Change project deadline",
+                                    availability: "Change member availability",
+                                  } as Record<string, string>
+                                )[k]
+                              }
+                            </option>
                           ))}
                         </select>
                       </Field>
@@ -1238,6 +1404,55 @@ export default function Home({
           </form>
         </Modal>
       )}
+      {modal === "request" && p && (
+        <RequestComposer
+          project={p}
+          taskId={requestTask}
+          close={() => setModal("")}
+          command={command}
+        />
+      )}
+      {modal === "archive" && task && p && (
+        <Modal title="Archive this task?" close={() => setModal("")}>
+          <p>
+            <strong>{task.title}</strong> will leave the active board and
+            workload forecast. Its comments and attachments are kept. A lead can
+            restore it from Archived tasks.
+          </p>
+          <form
+            className="cg-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(async () => {
+                await command("task.archive", {
+                  taskId: task.id,
+                  reason: archiveReason,
+                });
+                setModal("");
+              });
+            }}
+          >
+            <Field label="Reason for archiving">
+              <textarea
+                required
+                maxLength={500}
+                value={archiveReason}
+                onChange={(e) => setArchiveReason(e.target.value)}
+              />
+            </Field>
+            <button className="cg-primary" disabled={busy}>
+              Archive task
+            </button>
+            <button
+              type="button"
+              className="cg-text"
+              onClick={() => setModal("task")}
+            >
+              Keep task
+            </button>
+          </form>
+        </Modal>
+      )}
       {modal === "invite" && member && (
         <InvitationDialog
           memberName={member.name}
@@ -1436,268 +1651,249 @@ export default function Home({
       )}
       {modal === "task" && task && d && p && (
         <Modal title={task.id + " · Task details"} close={() => setModal("")}>
-          <form
-            className="cg-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              run(async () => {
-                await command("task.save", task);
-                setModal("");
-              });
-            }}
-          >
-            <Field label="Task title">
-              <input
-                required
-                value={task.title}
-                disabled={!lead || task.status === "Done"}
-                onChange={(e) => setTask({ ...task, title: e.target.value })}
-              />
-            </Field>
-            <Field label="Description">
-              <textarea
-                value={task.description}
-                disabled={!lead || task.status === "Done"}
-                onChange={(e) =>
-                  setTask({ ...task, description: e.target.value })
-                }
-              />
-            </Field>
-            <div className="cg-form-grid">
-              <Field label="Required skills">
-                <input
-                  value={task.requiredSkills.join(", ")}
-                  disabled={!lead}
-                  onChange={(e) =>
-                    setTask({
-                      ...task,
-                      requiredSkills: e.target.value
-                        .split(",")
-                        .map((s) => s.trim().toLowerCase()),
-                    })
-                  }
-                  onBlur={() =>
-                    setTask({
-                      ...task,
-                      requiredSkills: task.requiredSkills.filter(Boolean),
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Owner">
-                <select
-                  value={task.owner}
-                  disabled={!lead}
-                  onChange={(e) => setTask({ ...task, owner: e.target.value })}
-                >
-                  <option value="">Unassigned</option>
-                  {d.members.map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                      disabled={
-                        !task.requiredSkills
-                          .filter(Boolean)
-                          .every((s) => m.skills.includes(s))
-                      }
-                    >
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Estimated hours">
-                <input
-                  type="number"
-                  min={0.5}
-                  max={500}
-                  step={0.5}
-                  value={task.effort}
-                  disabled={!lead}
-                  onChange={(e) =>
-                    setTask({ ...task, effort: Number(e.target.value) })
-                  }
-                />
-              </Field>
-              <Field label="Remaining hours">
-                <input
-                  type="number"
-                  min={0}
-                  max={500}
-                  step={0.5}
-                  value={task.remaining}
-                  disabled={!lead && task.owner !== me?.id}
-                  onChange={(e) =>
-                    setTask({ ...task, remaining: Number(e.target.value) })
-                  }
-                />
-              </Field>
-              <Field label="Priority">
-                <select
-                  value={task.priority}
-                  disabled={!lead}
-                  onChange={(e) =>
-                    setTask({
-                      ...task,
-                      priority: e.target.value as Task["priority"],
-                    })
-                  }
-                >
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-              </Field>
-              <Field label="Due date">
-                <input
-                  type="date"
-                  required
-                  value={task.due}
-                  disabled={!lead}
-                  onChange={(e) => setTask({ ...task, due: e.target.value })}
-                />
-              </Field>
-              <Field label="Milestone">
-                <select
-                  value={task.milestone}
-                  disabled={!lead}
-                  onChange={(e) =>
-                    setTask({ ...task, milestone: e.target.value })
-                  }
-                >
-                  <option value="">No milestone</option>
-                  {d.milestones.map((m) => (
-                    <option key={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Earliest start">
-                <input
-                  type="date"
-                  value={task.earliestStart || ""}
-                  disabled={!lead}
-                  onChange={(e) =>
-                    setTask({ ...task, earliestStart: e.target.value || null })
-                  }
-                />
-              </Field>
-            </div>
-            <Field label="Prerequisites (hold Ctrl to select multiple)">
-              <select
-                multiple
-                value={task.dependencies}
-                disabled={!lead}
-                onChange={(e) =>
-                  setTask({
-                    ...task,
-                    dependencies: Array.from(e.target.selectedOptions).map(
-                      (o) => o.value,
-                    ),
-                  })
-                }
-              >
-                {d.tasks
-                  .filter((t) => t.id !== task.id)
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.id} · {t.title}
-                    </option>
-                  ))}
-              </select>
-            </Field>
-            <Field label="Blocker">
-              <input
-                value={task.blocker}
-                disabled={!lead && task.owner !== me?.id}
-                placeholder="What is preventing progress?"
-                onChange={(e) => setTask({ ...task, blocker: e.target.value })}
-              />
-            </Field>
-            <Field label="Expected blocker resolution (leave empty if unknown)">
-              <input
-                type="date"
-                value={task.blockedUntil || ""}
-                disabled={!lead && task.owner !== me?.id}
-                onChange={(e) =>
-                  setTask({ ...task, blockedUntil: e.target.value || null })
-                }
-              />
-            </Field>
-            <label>
-              <input
-                type="checkbox"
-                checked={task.locked}
-                disabled={!lead}
-                onChange={(e) => setTask({ ...task, locked: e.target.checked })}
-              />{" "}
-              Protect assignment from recovery suggestions
-            </label>
-            {lead && task.status !== "Done" && (
-              <button className="cg-primary" disabled={busy}>
-                Save task details
-              </button>
-            )}
-          </form>
           {d.tasks.some((t) => t.id === task.id) && (
-            <>
-              <div className="cg-task-actions">
-                <b>{task.status}</b>
-                {(lead || task.owner === me?.id) &&
-                  task.status !== "Done" &&
-                  task.status !== "Deferred" &&
-                  ["To do", "In progress", "In review"].map((s) => (
-                    <button
-                      key={s}
-                      disabled={busy}
-                      onClick={() =>
-                        run(async () => {
-                          await command("task.status", {
-                            taskId: task.id,
-                            status: s,
-                            remaining: task.remaining,
-                          });
-                          setModal("");
-                        })
-                      }
-                    >
-                      {s === "In review" ? "Submit for review" : s}
-                    </button>
-                  ))}
-                {task.status === "In review" &&
-                  ["lead", "reviewer"].includes(me?.role || "") && (
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        run(async () => {
-                          await command("task.approve", { taskId: task.id });
-                          setModal("");
-                        })
-                      }
-                    >
-                      Accept deliverable
-                    </button>
-                  )}
-              </div>
-              <p>{task.acceptance}</p>
-              {(lead || task.owner === me?.id) &&
-                !["Done", "Deferred"].includes(task.status) && (
-                  <button
-                    className="cg-text"
-                    disabled={busy}
-                    onClick={() =>
-                      run(async () => {
-                        await command("task.blocker", {
-                          taskId: task.id,
-                          blocker: task.blocker,
-                          blockedUntil: task.blockedUntil,
-                        });
-                        setModal("");
+            <TaskQuickActions
+              key={task.id + ":" + modalVersion}
+              project={p}
+              task={task}
+              command={async (type, payload) => {
+                await command(type, payload);
+                setModal("");
+              }}
+              askLead={() => askLead(task.id)}
+              viewRequests={() => {
+                setModal("");
+                setSection("Team requests");
+              }}
+              archive={() => {
+                setArchiveReason("");
+                setModal("archive");
+              }}
+            />
+          )}
+          <details
+            className="cg-task-detail"
+            open={!d.tasks.some((t) => t.id === task.id)}
+          >
+            <summary>
+              {lead
+                ? "Planning details: assignment, dates, and dependencies"
+                : "View planning details"}
+            </summary>
+            <form
+              className="cg-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(async () => {
+                  await command("task.save", task);
+                  setModal("");
+                });
+              }}
+            >
+              <Field label="Task title">
+                <input
+                  required
+                  value={task.title}
+                  disabled={!lead || task.status === "Done"}
+                  onChange={(e) => setTask({ ...task, title: e.target.value })}
+                />
+              </Field>
+              <Field label="Description">
+                <textarea
+                  value={task.description}
+                  disabled={!lead || task.status === "Done"}
+                  onChange={(e) =>
+                    setTask({ ...task, description: e.target.value })
+                  }
+                />
+              </Field>
+              <div className="cg-form-grid">
+                <Field label="Required skills">
+                  <input
+                    value={task.requiredSkills.join(", ")}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({
+                        ...task,
+                        requiredSkills: e.target.value
+                          .split(",")
+                          .map((s) => s.trim().toLowerCase()),
+                      })
+                    }
+                    onBlur={() =>
+                      setTask({
+                        ...task,
+                        requiredSkills: task.requiredSkills.filter(Boolean),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Owner">
+                  <select
+                    value={task.owner}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({ ...task, owner: e.target.value })
+                    }
+                  >
+                    <option value="">Unassigned</option>
+                    {d.members.map((m) => (
+                      <option
+                        key={m.id}
+                        value={m.id}
+                        disabled={
+                          !task.requiredSkills
+                            .filter(Boolean)
+                            .every((s) => m.skills.includes(s))
+                        }
+                      >
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Estimated hours">
+                  <input
+                    type="number"
+                    min={0.5}
+                    max={500}
+                    step={0.5}
+                    value={task.effort}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({ ...task, effort: Number(e.target.value) })
+                    }
+                  />
+                </Field>
+                <Field label="Remaining hours">
+                  <input
+                    type="number"
+                    min={0}
+                    max={500}
+                    step={0.5}
+                    value={task.remaining}
+                    disabled={!lead && task.owner !== me?.id}
+                    onChange={(e) =>
+                      setTask({ ...task, remaining: Number(e.target.value) })
+                    }
+                  />
+                </Field>
+                <Field label="Priority">
+                  <select
+                    value={task.priority}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({
+                        ...task,
+                        priority: e.target.value as Task["priority"],
                       })
                     }
                   >
-                    Save blocker update
-                  </button>
-                )}
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </Field>
+                <Field label="Due date">
+                  <input
+                    type="date"
+                    required
+                    value={task.due}
+                    disabled={!lead}
+                    onChange={(e) => setTask({ ...task, due: e.target.value })}
+                  />
+                </Field>
+                <Field label="Milestone">
+                  <select
+                    value={task.milestone}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({ ...task, milestone: e.target.value })
+                    }
+                  >
+                    <option value="">No milestone</option>
+                    {d.milestones.map((m) => (
+                      <option key={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Earliest start">
+                  <input
+                    type="date"
+                    value={task.earliestStart || ""}
+                    disabled={!lead}
+                    onChange={(e) =>
+                      setTask({
+                        ...task,
+                        earliestStart: e.target.value || null,
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+              <Field label="Prerequisites (hold Ctrl to select multiple)">
+                <select
+                  multiple
+                  value={task.dependencies}
+                  disabled={!lead}
+                  onChange={(e) =>
+                    setTask({
+                      ...task,
+                      dependencies: Array.from(e.target.selectedOptions).map(
+                        (o) => o.value,
+                      ),
+                    })
+                  }
+                >
+                  {d.tasks
+                    .filter((t) => t.id !== task.id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.id} · {t.title}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+              <Field label="Blocker">
+                <input
+                  value={task.blocker}
+                  disabled={!lead && task.owner !== me?.id}
+                  placeholder="What is preventing progress?"
+                  onChange={(e) =>
+                    setTask({ ...task, blocker: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Expected blocker resolution (leave empty if unknown)">
+                <input
+                  type="date"
+                  value={task.blockedUntil || ""}
+                  disabled={!lead && task.owner !== me?.id}
+                  onChange={(e) =>
+                    setTask({ ...task, blockedUntil: e.target.value || null })
+                  }
+                />
+              </Field>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={task.locked}
+                  disabled={!lead}
+                  onChange={(e) =>
+                    setTask({ ...task, locked: e.target.checked })
+                  }
+                />{" "}
+                Protect assignment from recovery suggestions
+              </label>
+              {lead && task.status !== "Done" && (
+                <button className="cg-primary" disabled={busy}>
+                  Save task details
+                </button>
+              )}
+            </form>
+          </details>
+          {d.tasks.some((t) => t.id === task.id) && (
+            <>
               <h2>Discussion & evidence</h2>
               {(d.tasks.find((t) => t.id === task.id)?.comments || []).map(
                 (c) => (

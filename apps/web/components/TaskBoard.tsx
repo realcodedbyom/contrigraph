@@ -15,17 +15,20 @@ const views = [
   "Overdue",
   "Blocked",
   "Review queue",
+  "Unassigned",
 ] as const;
 
 export default function TaskBoard({
   project,
   openTask,
+  initialView = "All tasks",
 }: {
   project: Project;
   openTask: (task: Task) => void;
+  initialView?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<string>("All tasks");
+  const [view, setView] = useState<string>(initialView);
   const [owner, setOwner] = useState("");
   const [priority, setPriority] = useState("");
   const [milestone, setMilestone] = useState("");
@@ -51,6 +54,7 @@ export default function TaskBoard({
     if (selected === "Blocked") return blocked(task);
     if (selected === "Review queue")
       return task.status === "In review" && active(task);
+    if (selected === "Unassigned") return !task.owner && active(task);
     return true;
   };
   const priorityOrder = { High: 0, Medium: 1, Low: 2 };

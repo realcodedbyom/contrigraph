@@ -22,9 +22,9 @@ export function Modal({
       if (e.key === "Tab") {
         const els = Array.from(
           document.querySelectorAll<HTMLElement>(
-            ".cg-dialog button:not(:disabled),.cg-dialog input:not(:disabled),.cg-dialog select:not(:disabled),.cg-dialog textarea:not(:disabled),.cg-dialog a",
+            ".cg-dialog button:not(:disabled),.cg-dialog input:not(:disabled),.cg-dialog select:not(:disabled),.cg-dialog textarea:not(:disabled),.cg-dialog a,.cg-dialog summary",
           ),
-        );
+        ).filter((el) => el.getClientRects().length > 0);
         const first = els[0],
           last = els.at(-1);
         if (e.shiftKey && document.activeElement === first) {

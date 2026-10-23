@@ -92,6 +92,26 @@ class ProgressUpdate(StrictModel):
     nextSteps: str = Field(min_length=1, max_length=3000)
 
 
+class TeamRequest(StrictModel):
+    id: str
+    author: str
+    taskId: str = ''
+    category: Literal['Help', 'Deadline change', 'Reassignment', 'New task', 'Archive task', 'Other']
+    message: str = Field(min_length=1, max_length=2000)
+    status: Literal['Open', 'Resolved', 'Declined', 'Cancelled'] = 'Open'
+    createdAt: str
+    response: str = Field(default='', max_length=2000)
+    respondedBy: str = ''
+    respondedAt: str = ''
+
+
+class ArchivedTask(StrictModel):
+    task: Task
+    archivedBy: str
+    archivedAt: str
+    reason: str = Field(min_length=1, max_length=500)
+
+
 class ProjectData(StrictModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default='', max_length=500)
@@ -103,6 +123,8 @@ class ProjectData(StrictModel):
     milestones: list[Milestone] = Field(default_factory=list, max_length=30)
     updates: list[ProgressUpdate] = Field(default_factory=list, max_length=500)
     wipLimits: dict[str, StrictInt] = Field(default_factory=dict)
+    requests: list[TeamRequest] = Field(default_factory=list, max_length=500)
+    archivedTasks: list[ArchivedTask] = Field(default_factory=list, max_length=500)
 
     @field_validator('wipLimits')
     @classmethod
@@ -123,7 +145,7 @@ class ProjectData(StrictModel):
 
 class Command(StrictModel):
     version: int = Field(ge=1)
-    type: Literal['task.save', 'task.status', 'task.approve', 'task.blocker', 'member.save', 'project.update', 'milestone.save', 'comment.add', 'scenario.apply', 'progress.add']
+    type: Literal['task.save', 'task.progress', 'task.status', 'task.approve', 'task.blocker', 'task.archive', 'task.restore', 'request.create', 'request.respond', 'request.cancel', 'member.save', 'project.update', 'milestone.save', 'comment.add', 'scenario.apply', 'progress.add']
     payload: dict = Field(default_factory=dict)
 
 

@@ -1,5 +1,17 @@
 # Platform audit and next improvements
 
+## 24 October follow-up: daily work before analysis
+
+The user reported clipped navigation at 100% zoom, difficulty finding assigned work, unclear task removal and no obvious way to request a lead decision. A bounded review of [Jira reviews on Capterra](https://www.capterra.com/p/19319/JIRA/reviews/), [Jira reviews on G2](https://www.g2.com/products/jira/reviews), and [ClickUp user discussion](https://www.reddit.com/r/clickup/comments/1lbyhu4/) found similar complaints about complexity, navigation and too many interactions. These are qualitative examples, not a representative survey or proof of demand.
+
+Implemented: My work as the default view; owner/lead progress controls separated from planning; team-visible requests with lead responses; reversible lead-only task archive; an independently scrolling sidebar and compact mobile menu; restored What-if simulator naming; Overview shortcuts to tasks, requests, reviews, blockers and unassigned work. Public help explains permissions and the difference between estimates and measured hours.
+
+Requests and archive records use the existing project document and transaction/version checks, with server attribution and audit events. No SQL migration or existing-data reset is needed. Up to 500 requests and 500 archived tasks are supported per project; additions reject at the bound rather than deleting history. Responses do not automatically change dates or assignments. Accepted tasks retain contribution history. Restoring a task rechecks original-owner skills and prerequisites.
+
+Verification: 128 API tests pass; local and VPS production builds pass. Browser checks used isolated local accounts and verified member progress, a deadline request, a lead reply visible to the member, archive/restore with recalculated workload, the Overview review shortcut, and a read-only What-if preview. Navigation was checked at normal desktop zoom, a 1280 × 600 embedded viewport and a 390 × 844 mobile viewport. Production checks remain read-only; no test records are added to real projects.
+
+Positioning hypothesis: small software teams with shared deadlines and scarce specialist skills. The reason to adopt is clear daily ownership plus a visible route to resolve blocked work; the reason to recommend is a demonstrably safer workload decision that saves coordination time. The next validation should observe several teams completing invitation → assignment → blocker/request → decision → review, and measure task-finding time, unanswered-request age, repeated use and referral intent. Do not call this validated product-market fit. Saved views, request notifications outside the workspace, load testing and backup/restore drills remain follow-up work.
+
 23 October 2026. This is a bounded audit, not a claim of complete production certification.
 
 ## Evidence and method

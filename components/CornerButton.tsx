@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface CornerButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface CornerButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Icon rendered to the right of the label. Defaults to the pencil/design SVG. */
   icon?: React.ReactNode;
   /** Show the default pencil icon. Set to false to hide it entirely. @default true */
@@ -47,10 +46,7 @@ export function CornerButton({
   ...props
 }: CornerButtonProps) {
   const resolvedIcon =
-    icon ??
-    (showIcon ? (
-      <PencilIcon className="corner-btn-svg" />
-    ) : null);
+    icon ?? (showIcon ? <PencilIcon className="corner-btn-svg" /> : null);
 
   return (
     <div
@@ -74,11 +70,7 @@ export function CornerButton({
       <div className="corner-dot bottom right" aria-hidden="true" />
       <div className="corner-dot bottom left" aria-hidden="true" />
 
-      <button
-        className={cn("corner-btn", className)}
-        style={style}
-        {...props}
-      >
+      <button className={cn("corner-btn", className)} style={style} {...props}>
         <span className="corner-btn-text">{children}</span>
         {resolvedIcon}
       </button>

@@ -1,23 +1,213 @@
-import { Project, Task, dayDiff, dateAfter } from './model';
+import { Project, Task, dayDiff, dateAfter } from "./model";
 export function topologicalSort(tasks: Task[]): Task[] {
- const byId=new Map(tasks.map(t=>[t.id,t])); const visiting=new Set<string>(); const visited=new Set<string>(); const result:Task[]=[];
- const visit=(t:Task)=>{if(visiting.has(t.id))throw new Error('This dependency creates a cycle.'); if(visited.has(t.id))return; visiting.add(t.id); for(const id of t.dependencies){const dep=byId.get(id);if(!dep)throw new Error(`Unknown dependency: ${id}`);visit(dep);}visiting.delete(t.id);visited.add(t.id);result.push(t);};
- tasks.forEach(visit);return result;
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const result: Task[] = [];
+  const visit = (t: Task) => {
+    if (visiting.has(t.id)) throw new Error("This dependency creates a cycle.");
+    if (visited.has(t.id)) return;
+    visiting.add(t.id);
+    for (const id of t.dependencies) {
+      const dep = byId.get(id);
+      if (!dep) throw new Error(`Unknown dependency: ${id}`);
+      visit(dep);
+    }
+    visiting.delete(t.id);
+    visited.add(t.id);
+    result.push(t);
+  };
+  tasks.forEach(visit);
+  return result;
 }
-export function schedule(project:Project) {
- if(project.members.some(m=>!Number.isFinite(m.capacity)||m.capacity<=0))throw new Error('Member capacity must be greater than zero.');
- if(new Set(project.tasks.map(t=>t.id)).size!==project.tasks.length)throw new Error('Task IDs must be unique.');
- if(project.tasks.some(t=>!Number.isFinite(t.remaining)||t.remaining<0||!Number.isFinite(t.release)||t.release<0))throw new Error('Remaining effort and start delay must be non-negative numbers.');
- if(!Number.isFinite(dayDiff(project.deadline)))throw new Error('Choose a valid project deadline.');
- topologicalSort(project.tasks);
- const result:Record<string,{start:number;finish:number}>={}; const available:Record<string,number>={};
- const priority={High:0,Medium:1,Low:2};
- const pending=project.tasks.filter(t=>t.status!=='Done').sort((a,b)=>priority[a.priority]-priority[b.priority]||a.due.localeCompare(b.due));
- project.tasks.filter(t=>t.status==='Done').forEach(t=>result[t.id]={start:0,finish:0});
- while(pending.length){const index=pending.findIndex(t=>t.dependencies.every(d=>result[d]));if(index<0)throw new Error('Unable to schedule dependencies.');const [t]=pending.splice(index,1);const owner=project.members.find(m=>m.id===t.owner);if(!owner||owner.capacity<=0)throw new Error('Each task needs an owner with positive capacity.');const start=Math.max(available[t.owner]||0,t.release,...t.dependencies.map(d=>result[d].finish));const finish=start+t.remaining/(owner.capacity/5);result[t.id]={start,finish};available[t.owner]=finish;}
- const finish=Math.max(0,...Object.values(result).map(r=>r.finish));return {tasks:result,finish,date:dateAfter(finish),delay:Math.max(0,Math.ceil(finish-dayDiff(project.deadline)))};
+export function schedule(project: Project) {
+  if (
+    project.members.some((m) => !Number.isFinite(m.capacity) || m.capacity <= 0)
+  )
+    throw new Error("Member capacity must be greater than zero.");
+  if (new Set(project.tasks.map((t) => t.id)).size !== project.tasks.length)
+    throw new Error("Task IDs must be unique.");
+  if (
+    project.tasks.some(
+      (t) =>
+        !Number.isFinite(t.remaining) ||
+        t.remaining < 0 ||
+        !Number.isFinite(t.release) ||
+        t.release < 0,
+    )
+  )
+    throw new Error(
+      "Remaining effort and start delay must be non-negative numbers.",
+    );
+  if (!Number.isFinite(dayDiff(project.deadline)))
+    throw new Error("Choose a valid project deadline.");
+  topologicalSort(project.tasks);
+  const result: Record<string, { start: number; finish: number }> = {};
+  const available: Record<string, number> = {};
+  const priority = { High: 0, Medium: 1, Low: 2 };
+  const pending = project.tasks
+    .filter((t) => t.status !== "Done")
+    .sort(
+      (a, b) =>
+        priority[a.priority] - priority[b.priority] ||
+        a.due.localeCompare(b.due),
+    );
+  project.tasks
+    .filter((t) => t.status === "Done")
+    .forEach((t) => (result[t.id] = { start: 0, finish: 0 }));
+  while (pending.length) {
+    const index = pending.findIndex((t) =>
+      t.dependencies.every((d) => result[d]),
+    );
+    if (index < 0) throw new Error("Unable to schedule dependencies.");
+    const [t] = pending.splice(index, 1);
+    const owner = project.members.find((m) => m.id === t.owner);
+    if (!owner || owner.capacity <= 0)
+      throw new Error("Each task needs an owner with positive capacity.");
+    const start = Math.max(
+      available[t.owner] || 0,
+      t.release,
+      ...t.dependencies.map((d) => result[d].finish),
+    );
+    const finish = start + t.remaining / (owner.capacity / 5);
+    result[t.id] = { start, finish };
+    available[t.owner] = finish;
+  }
+  const finish = Math.max(0, ...Object.values(result).map((r) => r.finish));
+  return {
+    tasks: result,
+    finish,
+    date: dateAfter(finish),
+    delay: Math.max(0, Math.ceil(finish - dayDiff(project.deadline))),
+  };
 }
-export function workload(project:Project){return project.members.map(m=>{const tasks=project.tasks.filter(t=>t.owner===m.id&&t.status!=='Done');const assigned=tasks.reduce((s,t)=>s+t.remaining,0);const blocked=tasks.filter(t=>t.blocker||t.dependencies.some(id=>project.tasks.find(d=>d.id===id)?.status!=='Done')).reduce((s,t)=>s+t.remaining,0);return {...m,assigned,blocked,ready:assigned-blocked,utilization:Math.round(assigned/m.capacity*100)};});}
-export function recommendations(project:Project){const loads=workload(project);const baseline=schedule(project);const options:{task:Task;from:string;to:string;delay:number;finish:number;reduction:number}[]=[];for(const from of loads.filter(m=>m.utilization>100)){for(const task of project.tasks.filter(t=>t.owner===from.id&&t.status==='To do'&&!t.blocker&&t.dependencies.every(id=>project.tasks.find(d=>d.id===id)?.status==='Done'))){for(const to of loads.filter(m=>m.id!==from.id&&m.skills.includes(task.skill)&&m.assigned+task.remaining<=m.capacity)){const candidate={...project,tasks:project.tasks.map(t=>t.id===task.id?{...t,owner:to.id}:t)};const next=schedule(candidate);if(next.finish<=baseline.finish) options.push({task,from:from.id,to:to.id,delay:next.delay,finish:next.finish,reduction:baseline.finish-next.finish});}}}return options.sort((a,b)=>b.reduction-a.reduction||b.task.remaining-a.task.remaining);}
-export function health(project:Project){const plan=schedule(project);const loads=workload(project);const blockers=project.tasks.filter(t=>t.status!=='Done'&&t.blocker);const overdue=project.tasks.filter(t=>t.status!=='Done'&&dayDiff(t.due)<0);const reasons:string[]=[];if(plan.delay)reasons.push(`Delivery forecast is ${plan.delay} day${plan.delay===1?'':'s'} past the deadline`);loads.filter(m=>m.utilization>100).forEach(m=>reasons.push(`${m.name.split(' ')[0]} has ${m.utilization}% of weekly capacity assigned`));if(blockers.length)reasons.push(`${blockers.length} unresolved blocker${blockers.length===1?'':'s'}`);if(overdue.length)reasons.push(`${overdue.length} overdue tasks`);return {label:plan.delay>2?'At risk':reasons.length?'Needs attention':'On track',tone:plan.delay>2?'red':reasons.length?'amber':'green',reasons,blockers,overdue};}
-export function contributions(project:Project){return project.members.map(m=>({...m,delivered:project.tasks.filter(t=>t.owner===m.id&&t.status==='Done').reduce((s,t)=>s+t.effort,0),reviews:project.activity.filter(a=>a.member===m.id&&a.kind==='reviewed').length,docs:project.activity.filter(a=>a.member===m.id&&a.kind==='documented').length,help:project.activity.filter(a=>a.member===m.id&&a.kind==='unblocked').length}));}
+export function workload(project: Project) {
+  return project.members.map((m) => {
+    const tasks = project.tasks.filter(
+      (t) => t.owner === m.id && t.status !== "Done",
+    );
+    const assigned = tasks.reduce((s, t) => s + t.remaining, 0);
+    const blocked = tasks
+      .filter(
+        (t) =>
+          t.blocker ||
+          t.dependencies.some(
+            (id) => project.tasks.find((d) => d.id === id)?.status !== "Done",
+          ),
+      )
+      .reduce((s, t) => s + t.remaining, 0);
+    return {
+      ...m,
+      assigned,
+      blocked,
+      ready: assigned - blocked,
+      utilization: Math.round((assigned / m.capacity) * 100),
+    };
+  });
+}
+export function recommendations(project: Project) {
+  const loads = workload(project);
+  const baseline = schedule(project);
+  const options: {
+    task: Task;
+    from: string;
+    to: string;
+    delay: number;
+    finish: number;
+    reduction: number;
+  }[] = [];
+  for (const from of loads.filter((m) => m.utilization > 100)) {
+    for (const task of project.tasks.filter(
+      (t) =>
+        t.owner === from.id &&
+        t.status === "To do" &&
+        !t.blocker &&
+        t.dependencies.every(
+          (id) => project.tasks.find((d) => d.id === id)?.status === "Done",
+        ),
+    )) {
+      for (const to of loads.filter(
+        (m) =>
+          m.id !== from.id &&
+          m.skills.includes(task.skill) &&
+          m.assigned + task.remaining <= m.capacity,
+      )) {
+        const candidate = {
+          ...project,
+          tasks: project.tasks.map((t) =>
+            t.id === task.id ? { ...t, owner: to.id } : t,
+          ),
+        };
+        const next = schedule(candidate);
+        if (next.finish <= baseline.finish)
+          options.push({
+            task,
+            from: from.id,
+            to: to.id,
+            delay: next.delay,
+            finish: next.finish,
+            reduction: baseline.finish - next.finish,
+          });
+      }
+    }
+  }
+  return options.sort(
+    (a, b) => b.reduction - a.reduction || b.task.remaining - a.task.remaining,
+  );
+}
+export function health(project: Project) {
+  const plan = schedule(project);
+  const loads = workload(project);
+  const blockers = project.tasks.filter(
+    (t) => t.status !== "Done" && t.blocker,
+  );
+  const overdue = project.tasks.filter(
+    (t) => t.status !== "Done" && dayDiff(t.due) < 0,
+  );
+  const reasons: string[] = [];
+  if (plan.delay)
+    reasons.push(
+      `Delivery forecast is ${plan.delay} day${plan.delay === 1 ? "" : "s"} past the deadline`,
+    );
+  loads
+    .filter((m) => m.utilization > 100)
+    .forEach((m) =>
+      reasons.push(
+        `${m.name.split(" ")[0]} has ${m.utilization}% of weekly capacity assigned`,
+      ),
+    );
+  if (blockers.length)
+    reasons.push(
+      `${blockers.length} unresolved blocker${blockers.length === 1 ? "" : "s"}`,
+    );
+  if (overdue.length) reasons.push(`${overdue.length} overdue tasks`);
+  return {
+    label:
+      plan.delay > 2
+        ? "At risk"
+        : reasons.length
+          ? "Needs attention"
+          : "On track",
+    tone: plan.delay > 2 ? "red" : reasons.length ? "amber" : "green",
+    reasons,
+    blockers,
+    overdue,
+  };
+}
+export function contributions(project: Project) {
+  return project.members.map((m) => ({
+    ...m,
+    delivered: project.tasks
+      .filter((t) => t.owner === m.id && t.status === "Done")
+      .reduce((s, t) => s + t.effort, 0),
+    reviews: project.activity.filter(
+      (a) => a.member === m.id && a.kind === "reviewed",
+    ).length,
+    docs: project.activity.filter(
+      (a) => a.member === m.id && a.kind === "documented",
+    ).length,
+    help: project.activity.filter(
+      (a) => a.member === m.id && a.kind === "unblocked",
+    ).length,
+  }));
+}

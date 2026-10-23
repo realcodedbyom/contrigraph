@@ -1,104 +1,2316 @@
-'use client';
-import {useEffect,useMemo,useRef,useState, type FormEvent} from 'react';
-import {SquaresFour, Kanban, GitBranch, UsersThree, ChartBar, ClockCounterClockwise, GearSix, CaretDown, ArrowUpRight, ArrowRight, Plus, MagnifyingGlass, Bell, X, Check, WarningCircle, CalendarBlank, DotsThree, ArrowDown, DownloadSimple, Flask, CheckCircle, Lightning, ChatCircle, Paperclip, Circle, SignOut, List, Target, ArrowSquareOut} from '@phosphor-icons/react';
-import {ReactFlow, Background, Controls, MarkerType, Position, type Connection} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import gsap from 'gsap';
-import Lenis from 'lenis';
-import CountUp from '@/components/CountUp';
-import SignalShader from '@/components/SignalShader';
-import MilestoneChart from '@/components/MilestoneChart';
-import {CornerButton} from '@/components/CornerButton';
-import SkiperLink from '@/components/SkiperLink';
-import {seed} from '@/lib/seed';
-import {Activity,Project,Task,Status,TODAY,formatDate,dateAfter} from '@/lib/model';
-import {schedule,health,workload,recommendations,contributions,topologicalSort} from '@/lib/engine';
+"use client";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  SquaresFour,
+  Kanban,
+  GitBranch,
+  UsersThree,
+  ChartBar,
+  ClockCounterClockwise,
+  GearSix,
+  CaretDown,
+  ArrowUpRight,
+  ArrowRight,
+  Plus,
+  MagnifyingGlass,
+  Bell,
+  X,
+  Check,
+  WarningCircle,
+  CalendarBlank,
+  DotsThree,
+  ArrowDown,
+  DownloadSimple,
+  Flask,
+  CheckCircle,
+  Lightning,
+  ChatCircle,
+  Paperclip,
+  Circle,
+  SignOut,
+  List,
+  Target,
+  ArrowSquareOut,
+} from "@phosphor-icons/react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MarkerType,
+  Position,
+  type Connection,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import gsap from "gsap";
+import Lenis from "lenis";
+import CountUp from "@/components/CountUp";
+import SignalShader from "@/components/SignalShader";
+import MilestoneChart from "@/components/MilestoneChart";
+import { CornerButton } from "@/components/CornerButton";
+import SkiperLink from "@/components/SkiperLink";
+import { seed } from "@/lib/seed";
+import {
+  Activity,
+  Project,
+  Task,
+  Status,
+  TODAY,
+  formatDate,
+  dateAfter,
+} from "@/lib/model";
+import {
+  schedule,
+  health,
+  workload,
+  recommendations,
+  contributions,
+  topologicalSort,
+} from "@/lib/engine";
 
-const pages=[{name:'Overview',icon:SquaresFour},{name:'Task board',icon:Kanban},{name:'Dependencies',icon:GitBranch},{name:'Team & workload',icon:UsersThree},{name:'Contributions',icon:ChartBar},{name:'Activity',icon:ClockCounterClockwise}];
-const statuses:Status[]=['To do','In progress','In review','Done'];
-const storageKey='contrigraph-projects-v1';
-function Avatar({id,project,size=''}:{id:string;project:Project;size?:string}){const m=project.members.find(x=>x.id===id);return <span className={`avatar ${size}`} style={{background:m?.color}} title={m?.name}>{m?.initials||'?'}</span>;}
-function Pill({children,tone='neutral'}:{children:React.ReactNode;tone?:string}){return <span className={`pill ${tone}`}><i/>{children}</span>;}
-function download(name:string,data:string,type='text/plain'){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-
-export default function Home(){
- const [projects,setProjects]=useState<Project[]>([seed]);const [active,setActive]=useState(0);const [ready,setReady]=useState(false);const [view,setView]=useState('Overview');const [modal,setModal]=useState<'task'|'project'|'report'|'settings'|null>(null);const [selected,setSelected]=useState<string|null>(null);const [toast,setToast]=useState('');const [search,setSearch]=useState('');const [filter,setFilter]=useState('All members');const [notifications,setNotifications]=useState(false);const [projectMenu,setProjectMenu]=useState(false);const [mobile,setMobile]=useState(false);const root=useRef<HTMLDivElement>(null);
- const project=projects[active]||projects[0];const plan=useMemo(()=>schedule(project),[project]);const risk=useMemo(()=>health(project),[project]);const loads=useMemo(()=>workload(project),[project]);const suggestions=useMemo(()=>recommendations(project),[project]);const evidence=useMemo(()=>contributions(project),[project]);const completed=project.tasks.filter(t=>t.status==='Done').length;const progress=project.tasks.length?Math.round(completed/project.tasks.length*100):0;
- const chosen=project.tasks.find(t=>t.id===selected);
- useEffect(()=>{try{const saved=localStorage.getItem(storageKey);if(saved){const parsed=JSON.parse(saved) as Project[];if(!Array.isArray(parsed)||!parsed.length)throw Error();parsed.forEach(p=>{schedule(p);contributions(p);});setProjects(parsed);}}catch{setToast('Saved data could not be loaded. The sample project is ready.');}setReady(true);},[]);
- useEffect(()=>{if(ready)try{localStorage.setItem(storageKey,JSON.stringify(projects));}catch{setToast('Browser storage is full. Export a backup before leaving.');}},[projects,ready]);
- useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),4200);return()=>clearTimeout(timer);},[toast]);
- useEffect(()=>{const handle=(e:KeyboardEvent)=>{if(e.key==='Escape'){setModal(null);setSelected(null);setNotifications(false);setProjectMenu(false);}};window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle);},[]);
- useEffect(()=>{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const lenis=new Lenis({autoRaf:true,duration:.7,anchors:true});return()=>lenis.destroy();},[]);
- useEffect(()=>{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const ctx=gsap.context(()=>{gsap.fromTo('.page-enter',{y:12},{y:0,duration:.45,stagger:.04,ease:'power2.out'});},root);return()=>ctx.revert();},[view]);
- function update(fn:(p:Project)=>Project){setProjects(all=>all.map((p,i)=>i===active?fn(p):p));}
- function log(p:Project,task:string,kind:Activity['kind'],text:string,member='om'){return {...p,activity:[{id:crypto.randomUUID(),member,task,kind,text,time:new Date().toISOString()},...p.activity]};}
- function saveTask(task:Task){try{const tasks=project.tasks.some(t=>t.id===task.id)?project.tasks.map(t=>t.id===task.id?task:t):[...project.tasks,task];topologicalSort(tasks);schedule({...project,tasks});const prev=project.tasks.find(t=>t.id===task.id);if(task.status==='Done'&&task.dependencies.some(d=>tasks.find(t=>t.id===d)?.status!=='Done'))throw Error('Complete the prerequisite tasks before approving this task.');update(p=>log({...p,tasks},task.id,!prev?'created':task.status==='Done'&&prev.status!=='Done'?'completed':'updated',`${!prev?'created':task.status==='Done'?'approved':'updated'} ${task.title}`));setModal(null);setSelected(null);setToast('Task saved. Forecast recalculated.');}catch(e){setToast((e as Error).message);}}
- function reassign(taskId:string,to:string){update(p=>{const task=p.tasks.find(t=>t.id===taskId)!;const name=p.members.find(m=>m.id===to)!.name.split(' ')[0];return log({...p,tasks:p.tasks.map(t=>t.id===taskId?{...t,owner:to}:t)},taskId,'reassigned',`reassigned ${task.title} to ${name}`);});setToast('Reassignment approved. Workload and forecast updated.');}
- const filtered=project.tasks.filter(t=>(filter==='All members'||t.owner===filter)&&`${t.title} ${t.id}`.toLowerCase().includes(search.toLowerCase()));
- const navigate=(page:string)=>{setView(page);setMobile(false);setSearch('');};
- const report=()=>({project:project.name,generatedAt:new Date().toISOString(),deadline:project.deadline,forecast:plan,health:risk,completion:{completed,total:project.tasks.length,progress,plannedEffort:project.tasks.reduce((s,t)=>s+t.effort,0),acceptedEffort:project.tasks.filter(t=>t.status==='Done').reduce((s,t)=>s+t.effort,0)},workload:loads,contributions:evidence,activity:project.activity});
-
- return <div ref={root} className="app-shell">
-  <aside className={`sidebar ${mobile?'open':''}`}>
-   <button className="brand" onClick={()=>navigate('Overview')} aria-label="ContriGraph overview"><span className="brand-mark"><i/><i/><i/><i/></span>contri<span>graph</span><span className="brand-period">.</span></button>
-   <div className="workspace-select"><span className="workspace-avatar">X</span><div><strong>Xyphic workspace</strong><small>Student team</small></div><CaretDown size={13}/></div>
-   <span className="nav-label">WORKSPACE</span>
-   <nav>{pages.map(({name,icon:Icon})=><button key={name} className={view===name?'active':''} onClick={()=>navigate(name)}><Icon size={19} weight={view===name?'fill':'regular'}/>{name}{name==='Task board'&&<span className="nav-count">{project.tasks.filter(t=>t.status!=='Done').length}</span>}</button>)}</nav>
-   <span className="nav-label intelligence-label">INTELLIGENCE</span>
-   <button className={`simulator-nav ${view==='What-If simulator'?'active':''}`} onClick={()=>navigate('What-If simulator')}><Flask size={19}/>What-If simulator<span className="new-label">TRY IT</span></button>
-   <div className="sidebar-bottom"><div className="deadline-card"><div className="deadline-icon"><Target size={20}/><span>BUILDING TOGETHER</span></div><strong>Every contribution counts.</strong><p>A clearer picture of your team’s work, from start to ship.</p><button onClick={()=>navigate('Contributions')}>See your team’s impact <ArrowUpRight size={15}/></button></div><button className="settings-button" onClick={()=>setModal('settings')}><GearSix size={19}/>Workspace settings</button><div className="profile"><Avatar id="om" project={project}/><div><strong>Om Kumar Jha</strong><small>Team lead</small></div><button aria-label="Open profile settings" onClick={()=>setModal('settings')}><CaretDown size={14}/></button></div></div>
-  </aside>
-  <div className="main-shell">
-   <header className="topbar"><div className="breadcrumb"><button className="mobile-menu" aria-label="Toggle navigation" onClick={()=>setMobile(!mobile)}><List size={22}/></button><span>Workspace</span><span className="slash">/</span><div className="project-picker"><button onClick={()=>setProjectMenu(!projectMenu)}>{project.name}<CaretDown size={12}/></button>{projectMenu&&<div className="dropdown">{projects.map((p,i)=><button key={i} onClick={()=>{setActive(i);setProjectMenu(false);}}>{p.name}{active===i&&<Check/>}</button>)}<button onClick={()=>{setProjectMenu(false);setModal('project');}}><Plus/>Create project</button></div>}</div></div><div className="topbar-right"><span className="saved-status"><i/>{ready?'Saved on this device':'Loading workspace'}</span><button className="icon-button notification-button" aria-label="Notifications" onClick={()=>setNotifications(!notifications)}><Bell size={20}/>{risk.reasons.length>0&&<i/>}</button><span className="topbar-divider"/><Avatar id="om" project={project}/></div>{notifications&&<div className="notification-panel"><h3>Project alerts <button aria-label="Close notifications" onClick={()=>setNotifications(false)}><X/></button></h3>{risk.reasons.length?risk.reasons.map((r,i)=><div className="notification" key={i}><WarningCircle size={18}/><p>{r}</p></div>):<p className="muted">You’re all caught up.</p>}<button className="text-button" onClick={()=>{navigate('What-If simulator');setNotifications(false);}}>Explore recovery options <ArrowRight size={15}/></button></div>}</header>
-   <main>
-    <div className="page-heading page-enter"><div><div className="eyebrow">{view==='Overview'?'YOUR PROJECT, AT A GLANCE':'XYPhIC WORKSPACE'.toUpperCase()}</div><h1>{view==='Overview'?'Good work starts with clarity.':view}</h1><p>{view==='Overview'?'Here’s where your team stands. Let’s keep things moving.':view==='What-If simulator'?'Test a change. See the impact. Then decide together.':view==='Contributions'?'Recognize the work behind the work, with evidence in every dimension.':view==='Dependencies'?'Understand what’s connected, what’s blocked, and what comes next.':view==='Team & workload'?'Make room for better teamwork. Balance effort against real availability.':view==='Task board'?'From the first idea to the final review. Every task has a home.':'A shared record of the decisions and work moving this project forward.'}</p></div><div className="heading-actions"><button className="button secondary" onClick={()=>setModal('report')}><DownloadSimple size={16}/>View report</button><button className="button primary" onClick={()=>setModal('task')}><Plus size={17}/>Create task</button></div></div>
-    <div className="project-strip page-enter"><div className="project-title"><span className="project-symbol"><GitBranch size={24}/></span><div><strong>{project.name}</strong><p>{project.description}</p></div><Pill tone={risk.tone}>{risk.label}</Pill></div><div className="project-meta"><div className="avatar-stack">{project.members.map(m=><Avatar key={m.id} id={m.id} project={project}/>)}</div><span>{project.members.length} members</span><span className="vertical-line"/><CalendarBlank size={16}/><span>Due {formatDate(project.deadline)}</span><button aria-label="Project settings" onClick={()=>setModal('settings')}><DotsThree size={23}/></button></div></div>
-
-    {view==='Overview'&&<>
-     <section className="metrics page-enter"><div className="metric"><div className="metric-label">Project completion <span className="mini-trend"><ArrowUpRight size={14}/> In motion</span></div><div className="metric-value"><CountUp to={progress} duration={1}/><span>%</span><small>{completed} of {project.tasks.length} tasks</small></div><div className="mini-progress"><span style={{width:`${progress}%`}}/></div></div><div className="metric"><div className="metric-label">Forecast delivery <CalendarBlank size={17}/></div><div className="metric-value date-value">{formatDate(plan.date)}<Pill tone={plan.delay?'amber':'green'}>{plan.delay?`+${plan.delay} days`:'On time'}</Pill></div><small>Based on effort & dependencies</small></div><div className="metric"><div className="metric-label">Team capacity <UsersThree size={18}/></div><div className="metric-value"><CountUp to={Math.round(loads.reduce((s,m)=>s+m.assigned,0)/project.members.reduce((s,m)=>s+m.capacity,0)*100)} duration={1}/><span>%</span><small>of weekly availability</small></div><div className="metric-note"><i className="amber-dot"/>{loads.filter(m=>m.utilization>100).length} member over capacity</div></div><div className="metric"><div className="metric-label">Unresolved blockers <WarningCircle size={18}/></div><div className="metric-value"><CountUp to={risk.blockers.length} duration={.8}/><span className="metric-description">needs attention</span></div><button className="text-button" onClick={()=>navigate('Dependencies')}>View dependencies <ArrowRight size={14}/></button></div></section>
-     {suggestions[0]&&<div className="insight-banner page-enter"><span className="insight-icon"><Lightning size={22} weight="fill"/></span><div><strong>A little balance can make a big difference.</strong><p>{project.members.find(m=>m.id===suggestions[0].from)?.name.split(' ')[0]} is over capacity. Moving “{suggestions[0].task.title}” to {project.members.find(m=>m.id===suggestions[0].to)?.name.split(' ')[0]} could free up {suggestions[0].task.remaining} hours.</p></div><button onClick={()=>navigate('What-If simulator')}>Explore suggestion <ArrowUpRight size={17}/></button></div>}
-     <div className="overview-grid"><section className="panel progress-panel page-enter"><div className="panel-heading"><div><h2>Milestone progress</h2><p>Accepted effort against the planned total</p></div><span className="chart-legend"><i/>Completed <i className="legend-gray"/>Remaining</span></div><MilestoneChart project={project}/><div className="chart-footer"><span><i className="green-dot"/>Planned milestones</span><span>{project.tasks.filter(t=>t.status==='In progress').length} tasks in progress <ArrowUpRight size={14}/></span></div></section>
-     <section className="panel workload-panel page-enter"><div className="panel-heading"><div><h2>Workload balance</h2><p>Remaining effort / weekly capacity</p></div><button aria-label="View workload" onClick={()=>navigate('Team & workload')}><ArrowUpRight size={19}/></button></div>{loads.map(m=><div className="workload-row" key={m.id}><div className="workload-person"><Avatar id={m.id} project={project}/><div><strong>{m.name.split(' ')[0]}</strong><small>{m.assigned}h / {m.capacity}h</small></div><span className={m.utilization>100?'overloaded':''}>{m.utilization}%</span></div><div className="workload-bar"><span className={m.utilization>100?'over':'normal'} style={{width:`${Math.min(m.utilization/1.5,100)}%`}}/><i style={{left:'66.66%'}}/></div></div>)}<div className="capacity-legend"><span><i/>Within capacity</span><span><i/>Over capacity</span><small>│ 100% capacity</small></div></section>
-     <section className="panel task-panel page-enter"><div className="panel-heading"><div><h2>Focus for the team <span className="count-bubble">{project.tasks.filter(t=>t.status!=='Done').length}</span></h2><p>The next steps that move your project forward</p></div><button className="text-button" onClick={()=>navigate('Task board')}>View board <ArrowRight size={14}/></button></div><div className="focus-table"><div className="table-head"><span>Task</span><span>Owner</span><span>Due</span><span>Status</span></div>{project.tasks.filter(t=>t.status!=='Done').slice(0,4).map(t=><button className="task-table-row" key={t.id} onClick={()=>setSelected(t.id)}><span><Circle size={17} weight={t.blocker?'fill':'regular'} className={t.blocker?'amber-text':''}/><span><strong>{t.title}</strong><small>{t.id} <b>·</b> {t.effort}h estimated</small></span></span><span><Avatar id={t.owner} project={project}/></span><span>{formatDate(t.due)}</span><span><Pill tone={t.blocker?'amber':t.status==='In progress'?'sage':'neutral'}>{t.blocker?'Blocked':t.status}</Pill></span></button>)}</div></section>
-     <section className="panel milestone-panel page-enter"><div className="panel-heading"><div><h2>Milestones</h2><p>Small steps. A shared finish line.</p></div><Target size={18}/></div>{['Foundation','Working prototype','Ready to ship'].map((m,i)=>{const tasks=project.tasks.filter(t=>t.milestone===m);const done=tasks.filter(t=>t.status==='Done').length;const percent=tasks.length?Math.round(done/tasks.length*100):0;return <div className="milestone" key={m}><div className={`milestone-point ${percent===100?'complete':''}`}>{percent===100?<Check size={12}/>:i+1}</div><div><strong>{m}</strong><small>{i===0?'Set up & align':i===1?'Build the core experience':'Review, test & deliver'}</small><div className="milestone-progress"><span style={{width:`${percent}%`}}/></div></div><span>{percent===100?<Pill tone="green">Done</Pill>:<small>{percent}%</small>}</span></div>;})}<div className="milestone-foot"><CalendarBlank size={15}/>Project deadline <strong>{formatDate(project.deadline)}</strong></div></section>
-     <section className="panel activity-panel page-enter"><div className="panel-heading"><div><h2>Recently, on your team</h2><p>The work behind the progress</p></div><button className="text-button" onClick={()=>navigate('Activity')}>All activity <ArrowRight size={14}/></button></div>{project.activity.slice(0,3).map(a=><ActivityRow key={a.id} activity={a} project={project}/>)}</section>
-     <section className="simulator-card page-enter"><SignalShader/><span className="sim-card-icon"><Flask size={24}/></span><div><h2>What if you tried<br/>a different plan?</h2><p>Explore changes to your team’s workload<br/>before making them real.</p><CornerButton accentColor="#e9eddf" icon={<ArrowUpRight size={17}/>} onClick={()=>navigate('What-If simulator')}>Open simulator</CornerButton></div><span className="sim-card-foot">CALCULATED, NOT GUESSED.</span></section></div>
-    </>}
-
-    {view==='Task board'&&<><div className="board-toolbar"><div className="search-field"><MagnifyingGlass size={17}/><input aria-label="Search tasks" placeholder="Find a task…" value={search} onChange={e=>setSearch(e.target.value)}/></div><select aria-label="Filter by member" value={filter} onChange={e=>setFilter(e.target.value)}><option>All members</option>{project.members.map(m=><option value={m.id} key={m.id}>{m.name}</option>)}</select><span className="muted">Drag tasks between columns or open a card to edit</span></div><div className="kanban-grid">{statuses.map(status=><section className="kanban-column" key={status} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const t=project.tasks.find(t=>t.id===e.dataTransfer.getData('text/plain'));if(t)saveTask({...t,status,remaining:status==='Done'?0:t.remaining||t.effort});}}><h2><i className={`status-dot status-${status.replaceAll(' ','-')}`}/>{status}<span>{filtered.filter(t=>t.status===status).length}</span><button aria-label={`Add ${status} task`} onClick={()=>setModal('task')}><Plus size={16}/></button></h2>{filtered.filter(t=>t.status===status).map(t=><button className="task-card" key={t.id} draggable onDragStart={e=>e.dataTransfer.setData('text/plain',t.id)} onClick={()=>setSelected(t.id)}><div className="task-card-top"><span>{t.id}</span><span className={`priority priority-${t.priority}`}>{t.priority}</span></div><h3>{t.title}</h3>{t.blocker&&<div className="blocker-label"><WarningCircle size={13}/>Blocked</div>}<div className="task-tags"><span>{t.skill}</span><span>{t.remaining}h left</span></div><div className="task-card-foot"><Avatar id={t.owner} project={project}/><span><CalendarBlank size={13}/>{formatDate(t.due)}</span>{t.comments.length>0&&<span><ChatCircle size={13}/>{t.comments.length}</span>}</div></button>)}<button className="add-task-quiet" onClick={()=>setModal('task')}><Plus size={14}/> Add task</button></section>)}</div></>}
-    {view==='Dependencies'&&<section className="panel graph-panel"><div className="panel-heading"><div><h2>The path to delivery</h2><p>Drag a connection from a task’s bottom handle to another task’s top handle. Circular links are rejected.</p></div><Pill tone="amber">{risk.blockers.length} blocker</Pill></div><DependencyGraph project={project} onSelect={setSelected} onConnect={(c)=>{if(!c.source||!c.target)return;const target=project.tasks.find(t=>t.id===c.target)!;if(target.dependencies.includes(c.source))return;saveTask({...target,dependencies:[...target.dependencies,c.source]});}}/><div className="graph-details">{risk.blockers.map(t=><button key={t.id} onClick={()=>setSelected(t.id)}><WarningCircle size={20}/><div><strong>{t.title}</strong><p>{t.blocker}</p></div><span>Resolve blocker <ArrowUpRight size={16}/></span></button>)}{!risk.blockers.length&&<p>No manual blockers. Dependency constraints still apply to the forecast.</p>}</div></section>}
-    {view==='Team & workload'&&<><div className="two-column"><section className="panel"><div className="panel-heading"><div><h2>Team availability</h2><p>Edit hours available over the next five working days</p></div></div>{loads.map(m=><div key={m.id} className="member-detail"><Avatar id={m.id} project={project} size="large"/><div><h3>{m.name}</h3><p>{m.role}</p><div className="task-tags">{m.skills.map(s=><span key={s}>{s}</span>)}</div></div><label>Hours / week<input aria-label={`${m.name} weekly capacity`} type="number" min="1" max="80" value={m.capacity} onChange={e=>{const v=Number(e.target.value);if(v>=1&&v<=80)update(p=>({...p,members:p.members.map(x=>x.id===m.id?{...x,capacity:v}:x)}));}}/></label></div>)}</section><section className="panel"><div className="panel-heading"><div><h2>Capacity breakdown</h2><p>Blocked effort is visible, not counted as free time</p></div></div>{loads.map(m=><div className="capacity-detail" key={m.id}><div><strong>{m.name.split(' ')[0]}</strong><Pill tone={m.utilization>100?'amber':'green'}>{m.utilization}% assigned</Pill></div><div className="stacked-bar"><span style={{width:`${m.ready/Math.max(m.assigned,m.capacity)*100}%`}}/><span className="blocked-segment" style={{width:`${m.blocked/Math.max(m.assigned,m.capacity)*100}%`}}/></div><p>{m.ready}h ready · {m.blocked}h blocked or waiting · {m.capacity}h capacity</p></div>)}</section></div><RecoverySuggestions project={project} onExplore={()=>navigate('What-If simulator')}/></>}
-    {view==='Contributions'&&<><div className="evidence-intro"><span><ChartBar size={25}/></span><div><h2>Good teamwork has more than one measure.</h2><p>Delivered effort, reviews, documentation, and helping teammates are shown separately. These records support a conversation, never an automatic grade.</p></div></div><section className="panel"><div className="panel-heading"><div><h2>Contribution evidence</h2><p>Sample and locally recorded evidence · All project activity</p></div><button className="button secondary" onClick={()=>download('contrigraph-contributions.csv','Member,Delivered effort (h),Reviews,Documentation,Blockers resolved\n'+evidence.map(m=>`${m.name},${m.delivered},${m.reviews},${m.docs},${m.help}`).join('\n'),'text/csv')}>Export CSV <DownloadSimple/></button></div><div className="evidence-table"><div className="evidence-row evidence-head"><span>Team member</span><span>Delivered effort</span><span>Reviews</span><span>Documentation</span><span>Blockers resolved</span></div>{evidence.map(m=><div className="evidence-row" key={m.id}><span><Avatar id={m.id} project={project}/><strong>{m.name}</strong></span><span><b>{m.delivered}</b> h</span><span>{m.reviews}</span><span>{m.docs}</span><span>{m.help}</span></div>)}</div></section><section className="panel evidence-log"><div className="panel-heading"><div><h2>Behind the numbers</h2><p>Every event links back to the task it concerns</p></div></div>{project.activity.filter(a=>['completed','reviewed','documented','unblocked'].includes(a.kind)).map(a=><button className="evidence-event" key={a.id} onClick={()=>setSelected(a.task)}><ActivityRow activity={a} project={project}/><ArrowUpRight/></button>)}</section></>}
-    {view==='Activity'&&<section className="panel full-activity"><div className="panel-heading"><div><h2>Project activity</h2><p>{project.activity.length} events in this device’s project history</p></div><Pill tone="neutral">Local demo history</Pill></div>{project.activity.length?project.activity.map(a=><button className="evidence-event" key={a.id} onClick={()=>setSelected(a.task)}><ActivityRow activity={a} project={project}/><ArrowUpRight/></button>):<div className="empty-state">Create your first task to start the project history.</div>}</section>}
-    {view==='What-If simulator'&&<Simulator project={project} onApprove={reassign}/>}
-    <footer className="page-footer"><span><span className="footer-logo">◈</span> Built for teams. Made for progress.</span><span>ContriGraph <b>·</b> TechTrix 2026 <b>·</b> Local demo</span></footer>
-   </main>
-  </div>
-  {toast&&<div className="toast" role="status"><CheckCircle size={19}/>{toast}<button aria-label="Dismiss message" onClick={()=>setToast('')}><X size={14}/></button></div>}
-  {(modal||chosen)&&<div className="modal-backdrop" onClick={()=>{setModal(null);setSelected(null);}}><section className={`modal ${modal==='report'?'report-modal':''}`} role="dialog" aria-modal="true" aria-label={chosen?'Task details':modal==='task'?'Create task':modal==='project'?'Create project':modal==='report'?'Performance report':'Project settings'} onClick={e=>e.stopPropagation()}><button className="modal-close" aria-label="Close dialog" onClick={()=>{setModal(null);setSelected(null);}}><X size={21}/></button>
-   {(modal==='task'||chosen)&&<TaskEditor key={chosen?.id||'new'} task={chosen} project={project} onSave={saveTask} onComment={(text,kind)=>{if(!chosen||!text.trim())return;update(p=>log({...p,tasks:p.tasks.map(t=>t.id===chosen.id?{...t,comments:[...t.comments,{author:'om',text:text.trim(),time:new Date().toISOString()}]}:t)},chosen.id,kind,`${kind==='reviewed'?'reviewed':kind==='documented'?'documented':kind==='unblocked'?'helped resolve a blocker on':'commented on'} ${chosen.title}`));setToast('Evidence recorded.');}}/>}
-   {modal==='project'&&<form onSubmit={e=>{e.preventDefault();const d=new FormData(e.currentTarget);const p:Project={name:String(d.get('name')).trim(),description:String(d.get('description')).trim(),deadline:String(d.get('deadline')),members:structuredClone(seed.members),tasks:[],activity:[]};if(!p.name)return;setProjects(all=>[...all,p]);setActive(projects.length);setView('Overview');setModal(null);setToast('Project created. Add tasks to start planning.');}}><div className="eyebrow">A NEW CHAPTER</div><h2>Create a project</h2><p>Give your team a shared direction.</p><label>Project name<input name="name" required maxLength={70} autoFocus placeholder="What are you building?"/></label><label>Description<textarea name="description" maxLength={240} placeholder="A little context for the team"/></label><label>Deadline<input type="date" name="deadline" defaultValue="2026-11-06" required min={TODAY}/></label><p className="form-note">Your workspace’s three members will join this project.</p><button className="button primary" type="submit">Create project <ArrowRight/></button></form>}
-   {modal==='settings'&&<form onSubmit={e=>{e.preventDefault();const d=new FormData(e.currentTarget);update(p=>({...p,name:String(d.get('name')).trim()||p.name,description:String(d.get('description')),deadline:String(d.get('deadline'))}));setModal(null);setToast('Project settings saved.');}}><div className="eyebrow">WORKSPACE</div><h2>Project settings</h2><p>Manage the current project and your local data.</p><label>Project name<input name="name" defaultValue={project.name} required maxLength={70}/></label><label>Description<textarea name="description" defaultValue={project.description} maxLength={240}/></label><label>Project deadline<input name="deadline" type="date" defaultValue={project.deadline} required/></label><div className="storage-note"><strong>Local prototype</strong><p>Data and attachments stay in this browser. Shared accounts, live sync, and server-enforced audit history need a connected backend.</p><button type="button" className="text-button" onClick={()=>download('contrigraph-backup.json',JSON.stringify(projects,null,2),'application/json')}>Download workspace backup <DownloadSimple/></button><div className="ui-credits"><SkiperLink href="https://skiper-ui.com/v1/skiper40">Skiper UI</SkiperLink><SkiperLink href="https://www.vengenceui.com">Vengeance UI</SkiperLink><SkiperLink href="https://reactbits.dev">React Bits</SkiperLink></div></div><button className="button primary" type="submit">Save settings <Check/></button></form>}
-   {modal==='report'&&<><div className="eyebrow">PROJECT PERFORMANCE</div><h2>{project.name} report</h2><p>Calculated from current tasks, estimates, capacity, and recorded evidence.</p><div className="report-stats"><div><small>Completion</small><strong>{progress}%</strong></div><div><small>Delivery forecast</small><strong>{formatDate(plan.date)}</strong></div><div><small>Deadline variance</small><strong>+{plan.delay} days</strong></div></div><h3>Health: {risk.label}</h3>{risk.reasons.map(r=><p className="report-reason" key={r}><WarningCircle size={16}/>{r}</p>)}<h3>Team workload & contribution</h3>{evidence.map(m=><p className="report-member" key={m.id}><strong>{m.name}</strong><span>{loads.find(x=>x.id===m.id)?.utilization}% capacity · {m.delivered}h delivered · {m.reviews} reviews · {m.docs} docs · {m.help} blockers resolved</span></p>)}<h3>Recommended recovery</h3><p>{suggestions[0]?`Move ${suggestions[0].task.title} to ${project.members.find(m=>m.id===suggestions[0].to)?.name}. Recalculated delivery: ${formatDate(dateAfter(suggestions[0].finish))}.`:'No feasible redistribution found. Review scope, availability, estimates, or the deadline with your team.'}</p><p className="form-note">Forecast uses a greedy schedule, uniform daily availability, uninterrupted tasks, and calendar-day offsets. Estimates are not delivery guarantees.</p><button className="button primary" onClick={()=>download('contrigraph-report.json',JSON.stringify(report(),null,2),'application/json')}>Download report <DownloadSimple/></button></>}
-  </section></div>}
- </div>;
+const pages = [
+  { name: "Overview", icon: SquaresFour },
+  { name: "Task board", icon: Kanban },
+  { name: "Dependencies", icon: GitBranch },
+  { name: "Team & workload", icon: UsersThree },
+  { name: "Contributions", icon: ChartBar },
+  { name: "Activity", icon: ClockCounterClockwise },
+];
+const statuses: Status[] = ["To do", "In progress", "In review", "Done"];
+const storageKey = "contrigraph-projects-v1";
+function Avatar({
+  id,
+  project,
+  size = "",
+}: {
+  id: string;
+  project: Project;
+  size?: string;
+}) {
+  const m = project.members.find((x) => x.id === id);
+  return (
+    <span
+      className={`avatar ${size}`}
+      style={{ background: m?.color }}
+      title={m?.name}
+    >
+      {m?.initials || "?"}
+    </span>
+  );
+}
+function Pill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: string;
+}) {
+  return (
+    <span className={`pill ${tone}`}>
+      <i />
+      {children}
+    </span>
+  );
+}
+function download(name: string, data: string, type = "text/plain") {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function ActivityRow({activity:a,project}:{activity:Activity;project:Project}){const name=project.members.find(m=>m.id===a.member)?.name.split(' ')[0]||'Team';return <div className="activity-row"><Avatar id={a.member} project={project}/><div><p><strong>{name}</strong> {a.text}</p><small>{a.task} <b>·</b> {a.kind}</small></div><time>{new Date(a.time).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</time></div>;}
-function RecoverySuggestions({project,onExplore}:{project:Project;onExplore:()=>void}){const suggestion=recommendations(project)[0];return <section className="panel recovery-panel"><div className="panel-heading"><div><h2>Recommended next step</h2><p>Skills, capacity, dependencies, and forecast checked</p></div><Lightning size={20}/></div><p>{suggestion?`Move “${suggestion.task.title}” from ${project.members.find(m=>m.id===suggestion.from)?.name.split(' ')[0]} to ${project.members.find(m=>m.id===suggestion.to)?.name.split(' ')[0]}. The task fits their skills and available hours.`:'No safe reassignment found. Consider reducing scope, increasing availability, or adjusting the deadline.'}</p><button className="button secondary" onClick={onExplore}>Test in simulator <ArrowUpRight/></button></section>;}
+export default function Home() {
+  const [projects, setProjects] = useState<Project[]>([seed]);
+  const [active, setActive] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [view, setView] = useState("Overview");
+  const [modal, setModal] = useState<
+    "task" | "project" | "report" | "settings" | null
+  >(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All members");
+  const [notifications, setNotifications] = useState(false);
+  const [projectMenu, setProjectMenu] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const project = projects[active] || projects[0];
+  const plan = useMemo(() => schedule(project), [project]);
+  const risk = useMemo(() => health(project), [project]);
+  const loads = useMemo(() => workload(project), [project]);
+  const suggestions = useMemo(() => recommendations(project), [project]);
+  const evidence = useMemo(() => contributions(project), [project]);
+  const completed = project.tasks.filter((t) => t.status === "Done").length;
+  const progress = project.tasks.length
+    ? Math.round((completed / project.tasks.length) * 100)
+    : 0;
+  const chosen = project.tasks.find((t) => t.id === selected);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Project[];
+        if (!Array.isArray(parsed) || !parsed.length) throw Error();
+        parsed.forEach((p) => {
+          schedule(p);
+          contributions(p);
+        });
+        setProjects(parsed);
+      }
+    } catch {
+      setToast("Saved data could not be loaded. The sample project is ready.");
+    }
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready)
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(projects));
+      } catch {
+        setToast("Browser storage is full. Export a backup before leaving.");
+      }
+  }, [projects, ready]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 4200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setModal(null);
+        setSelected(null);
+        setNotifications(false);
+        setProjectMenu(false);
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, []);
+  useEffect(() => {
+    if (!modal && !selected) return;
+    const previous = document.activeElement as HTMLElement;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const dialog = document.querySelector('[role="dialog"]');
+      const elements = Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          "button:not([disabled]),a[href],input,select,textarea",
+        ) || [],
+      );
+      const first = elements[0],
+        last = elements[elements.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+    window.addEventListener("keydown", trap);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener("keydown", trap);
+      previous?.focus();
+    };
+  }, [modal, selected]);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const lenis = new Lenis({ autoRaf: true, duration: 0.7, anchors: true });
+    return () => lenis.destroy();
+  }, []);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ".page-enter",
+        { y: 12 },
+        { y: 0, duration: 0.45, stagger: 0.04, ease: "power2.out" },
+      );
+    }, root);
+    return () => ctx.revert();
+  }, [view]);
+  function update(fn: (p: Project) => Project) {
+    setProjects((all) => all.map((p, i) => (i === active ? fn(p) : p)));
+  }
+  function log(
+    p: Project,
+    task: string,
+    kind: Activity["kind"],
+    text: string,
+    member = "om",
+  ) {
+    return {
+      ...p,
+      activity: [
+        {
+          id: crypto.randomUUID(),
+          member,
+          task,
+          kind,
+          text,
+          time: new Date().toISOString(),
+        },
+        ...p.activity,
+      ],
+    };
+  }
+  function saveTask(task: Task) {
+    try {
+      const tasks = project.tasks.some((t) => t.id === task.id)
+        ? project.tasks.map((t) => (t.id === task.id ? task : t))
+        : [...project.tasks, task];
+      topologicalSort(tasks);
+      schedule({ ...project, tasks });
+      const prev = project.tasks.find((t) => t.id === task.id);
+      if (
+        task.status === "Done" &&
+        task.dependencies.some(
+          (d) => tasks.find((t) => t.id === d)?.status !== "Done",
+        )
+      )
+        throw Error(
+          "Complete the prerequisite tasks before approving this task.",
+        );
+      update((p) =>
+        log(
+          { ...p, tasks },
+          task.id,
+          !prev
+            ? "created"
+            : task.status === "Done" && prev.status !== "Done"
+              ? "completed"
+              : "updated",
+          `${!prev ? "created" : task.status === "Done" ? "approved" : "updated"} ${task.title}`,
+        ),
+      );
+      setModal(null);
+      setSelected(null);
+      setToast("Task saved. Forecast recalculated.");
+    } catch (e) {
+      setToast((e as Error).message);
+    }
+  }
+  function reassign(taskId: string, to: string) {
+    update((p) => {
+      const task = p.tasks.find((t) => t.id === taskId)!;
+      const name = p.members.find((m) => m.id === to)!.name.split(" ")[0];
+      return log(
+        {
+          ...p,
+          tasks: p.tasks.map((t) =>
+            t.id === taskId ? { ...t, owner: to } : t,
+          ),
+        },
+        taskId,
+        "reassigned",
+        `reassigned ${task.title} to ${name}`,
+      );
+    });
+    setToast("Reassignment approved. Workload and forecast updated.");
+  }
+  const filtered = project.tasks.filter(
+    (t) =>
+      (filter === "All members" || t.owner === filter) &&
+      `${t.title} ${t.id}`.toLowerCase().includes(search.toLowerCase()),
+  );
+  const navigate = (page: string) => {
+    window.scrollTo(0, 0);
+    setView(page);
+    setMobile(false);
+    setSearch("");
+  };
+  const report = () => ({
+    project: project.name,
+    generatedAt: new Date().toISOString(),
+    deadline: project.deadline,
+    forecast: plan,
+    health: risk,
+    completion: {
+      completed,
+      total: project.tasks.length,
+      progress,
+      plannedEffort: project.tasks.reduce((s, t) => s + t.effort, 0),
+      acceptedEffort: project.tasks
+        .filter((t) => t.status === "Done")
+        .reduce((s, t) => s + t.effort, 0),
+    },
+    workload: loads,
+    contributions: evidence,
+    activity: project.activity,
+  });
 
-function DependencyGraph({project,onSelect,onConnect}:{project:Project;onSelect:(id:string)=>void;onConnect:(c:Connection)=>void}){const plan=schedule(project);const ordered=topologicalSort(project.tasks);const depth:Record<string,number>={};ordered.forEach(t=>depth[t.id]=t.dependencies.length?Math.max(...t.dependencies.map(d=>depth[d]))+1:0);const rows:Record<number,number>={};const nodes=ordered.map(t=>{const d=depth[t.id];const row=rows[d]||0;rows[d]=row+1;return {id:t.id,position:{x:d*300,y:row*110},data:{label:<div className="graph-node"><small>{t.id} · {t.remaining}h remaining</small><strong>{t.title}</strong><span><i className={t.status==='Done'?'green-dot':t.blocker?'amber-dot':'neutral-dot'}/>{t.blocker?'Blocked':t.status} <b>·</b> Day {Math.ceil(plan.tasks[t.id].finish)}</span></div>},style:{width:245,borderRadius:10,border:t.blocker?'1px solid #d9a45c':'1px solid #dedfd7',background:t.status==='Done'?'#f0f4eb':'#fff',padding:0},sourcePosition:Position.Bottom,targetPosition:Position.Top};});const edges=project.tasks.flatMap(t=>t.dependencies.map(d=>({id:`${d}-${t.id}`,source:d,target:t.id,type:'smoothstep',animated:!!project.tasks.find(x=>x.id===d)?.blocker,style:{stroke:project.tasks.find(x=>x.id===d)?.blocker?'#c28235':'#aaa99e',strokeWidth:1.5},markerEnd:{type:MarkerType.ArrowClosed}})));return <div className="dependency-canvas"><ReactFlow nodes={nodes} edges={edges} onConnect={onConnect} onNodeClick={(_,n)=>onSelect(n.id)} fitView fitViewOptions={{padding:.12}} minZoom={.25} maxZoom={1.5}><Background gap={20} color="#dddcd5"/><Controls showInteractive={false}/></ReactFlow></div>;}
+  return (
+    <div ref={root} className="app-shell">
+      <aside className={`sidebar ${mobile ? "open" : ""}`}>
+        <button
+          className="brand"
+          onClick={() => navigate("Overview")}
+          aria-label="ContriGraph overview"
+        >
+          <span className="brand-mark">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          contri<span>graph</span>
+          <span className="brand-period">.</span>
+        </button>
+        <div className="workspace-select">
+          <span className="workspace-avatar">X</span>
+          <div>
+            <strong>Xyphic workspace</strong>
+            <small>Student team</small>
+          </div>
+          <CaretDown size={13} />
+        </div>
+        <span className="nav-label">WORKSPACE</span>
+        <nav>
+          {pages.map(({ name, icon: Icon }) => (
+            <button
+              key={name}
+              className={view === name ? "active" : ""}
+              onClick={() => navigate(name)}
+            >
+              <Icon size={19} weight={view === name ? "fill" : "regular"} />
+              {name}
+              {name === "Task board" && (
+                <span className="nav-count">
+                  {project.tasks.filter((t) => t.status !== "Done").length}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <span className="nav-label intelligence-label">INTELLIGENCE</span>
+        <button
+          className={`simulator-nav ${view === "What-If simulator" ? "active" : ""}`}
+          onClick={() => navigate("What-If simulator")}
+        >
+          <Flask size={19} />
+          What-If simulator<span className="new-label">TRY IT</span>
+        </button>
+        <div className="sidebar-bottom">
+          <div className="deadline-card">
+            <div className="deadline-icon">
+              <Target size={20} />
+              <span>BUILDING TOGETHER</span>
+            </div>
+            <strong>Every contribution counts.</strong>
+            <p>A clearer picture of your team’s work, from start to ship.</p>
+            <button onClick={() => navigate("Contributions")}>
+              See your team’s impact <ArrowUpRight size={15} />
+            </button>
+          </div>
+          <button
+            className="settings-button"
+            onClick={() => setModal("settings")}
+          >
+            <GearSix size={19} />
+            Workspace settings
+          </button>
+          <div className="profile">
+            <Avatar id="om" project={project} />
+            <div>
+              <strong>Om Kumar Jha</strong>
+              <small>Team lead</small>
+            </div>
+            <button
+              aria-label="Open profile settings"
+              onClick={() => setModal("settings")}
+            >
+              <CaretDown size={14} />
+            </button>
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <button
+              className="mobile-menu"
+              aria-label="Toggle navigation"
+              onClick={() => setMobile(!mobile)}
+            >
+              <List size={22} />
+            </button>
+            <span>Workspace</span>
+            <span className="slash">/</span>
+            <div className="project-picker">
+              <button onClick={() => setProjectMenu(!projectMenu)}>
+                {project.name}
+                <CaretDown size={12} />
+              </button>
+              {projectMenu && (
+                <div className="dropdown">
+                  {projects.map((p, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setActive(i);
+                        setProjectMenu(false);
+                      }}
+                    >
+                      {p.name}
+                      {active === i && <Check />}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setProjectMenu(false);
+                      setModal("project");
+                    }}
+                  >
+                    <Plus />
+                    Create project
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="topbar-right">
+            <span className="saved-status">
+              <i />
+              {ready ? "Saved on this device" : "Loading workspace"}
+            </span>
+            <button
+              className="icon-button notification-button"
+              aria-label="Notifications"
+              onClick={() => setNotifications(!notifications)}
+            >
+              <Bell size={20} />
+              {risk.reasons.length > 0 && <i />}
+            </button>
+            <span className="topbar-divider" />
+            <Avatar id="om" project={project} />
+          </div>
+          {notifications && (
+            <div className="notification-panel">
+              <h3>
+                Project alerts{" "}
+                <button
+                  aria-label="Close notifications"
+                  onClick={() => setNotifications(false)}
+                >
+                  <X />
+                </button>
+              </h3>
+              {risk.reasons.length ? (
+                risk.reasons.map((r, i) => (
+                  <div className="notification" key={i}>
+                    <WarningCircle size={18} />
+                    <p>{r}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="muted">You’re all caught up.</p>
+              )}
+              <button
+                className="text-button"
+                onClick={() => {
+                  navigate("What-If simulator");
+                  setNotifications(false);
+                }}
+              >
+                Explore recovery options <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
+        </header>
+        <main>
+          <div className="page-heading page-enter">
+            <div>
+              <div className="eyebrow">
+                {view === "Overview"
+                  ? "YOUR PROJECT, AT A GLANCE"
+                  : "XYPhIC WORKSPACE".toUpperCase()}
+              </div>
+              <h1>
+                {view === "Overview" ? "Good work starts with clarity." : view}
+              </h1>
+              <p>
+                {view === "Overview"
+                  ? "Here’s where your team stands. Let’s keep things moving."
+                  : view === "What-If simulator"
+                    ? "Test a change. See the impact. Then decide together."
+                    : view === "Contributions"
+                      ? "Recognize the work behind the work, with evidence in every dimension."
+                      : view === "Dependencies"
+                        ? "Understand what’s connected, what’s blocked, and what comes next."
+                        : view === "Team & workload"
+                          ? "Make room for better teamwork. Balance effort against real availability."
+                          : view === "Task board"
+                            ? "From the first idea to the final review. Every task has a home."
+                            : "A shared record of the decisions and work moving this project forward."}
+              </p>
+            </div>
+            <div className="heading-actions">
+              <button
+                className="button secondary"
+                onClick={() => setModal("report")}
+              >
+                <DownloadSimple size={16} />
+                View report
+              </button>
+              <button
+                className="button primary"
+                onClick={() => setModal("task")}
+              >
+                <Plus size={17} />
+                Create task
+              </button>
+            </div>
+          </div>
+          <div className="project-strip page-enter">
+            <div className="project-title">
+              <span className="project-symbol">
+                <GitBranch size={24} />
+              </span>
+              <div>
+                <strong>{project.name}</strong>
+                <p>{project.description}</p>
+              </div>
+              <Pill tone={risk.tone}>{risk.label}</Pill>
+            </div>
+            <div className="project-meta">
+              <div className="avatar-stack">
+                {project.members.map((m) => (
+                  <Avatar key={m.id} id={m.id} project={project} />
+                ))}
+              </div>
+              <span>{project.members.length} members</span>
+              <span className="vertical-line" />
+              <CalendarBlank size={16} />
+              <span>Due {formatDate(project.deadline)}</span>
+              <button
+                aria-label="Project settings"
+                onClick={() => setModal("settings")}
+              >
+                <DotsThree size={23} />
+              </button>
+            </div>
+          </div>
 
-function Simulator({project,onApprove}:{project:Project;onApprove:(id:string,to:string)=>void}){const options=recommendations(project);const [taskId,setTaskId]=useState(options[0]?.task.id||project.tasks.find(t=>t.status!=='Done')?.id||'');const [owner,setOwner]=useState(options[0]?.to||'');const [delay,setDelay]=useState(0);const base=schedule(project);const task=project.tasks.find(t=>t.id===taskId);const member=project.members.find(m=>m.id===owner);const valid=!!task&&!!member&&member.id!==task.owner&&member.skills.includes(task.skill)&&delay===0&&task.status==='To do'&&!task.blocker&&task.dependencies.every(id=>project.tasks.find(t=>t.id===id)?.status==='Done');const hypothetical={...project,tasks:project.tasks.map(t=>t.id===taskId?{...t,owner:owner||t.owner,release:t.release+delay}:t)};const next=schedule(hypothetical);const before=workload(project);const after=workload(hypothetical);const over=after.some(m=>m.utilization>100);const approve=valid&&!over&&next.finish<=base.finish;
- return <div className="simulator-layout"><section className="panel simulation-controls"><div className="panel-heading"><div><h2>Your scenario</h2><p>Changes stay hypothetical until approved</p></div><Flask size={22}/></div><div className="simulation-form"><label>Task to explore<select value={taskId} onChange={e=>{setTaskId(e.target.value);setOwner('');}}>{project.tasks.filter(t=>t.status!=='Done').map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label><label>Try a different owner<select value={owner} onChange={e=>setOwner(e.target.value)}><option value="">Keep current owner</option>{project.members.filter(m=>m.id!==task?.owner).map(m=><option value={m.id} key={m.id}>{m.name} {m.skills.includes(task?.skill||'')?'':'(skill mismatch)'}</option>)}</select></label><label>Additional start delay <strong>{delay} days</strong><input type="range" min="0" max="7" step="1" value={delay} onChange={e=>setDelay(Number(e.target.value))}/><span className="range-labels"><small>No extra delay</small><small>7 days</small></span></label><div className="simulation-rule"><GitBranch size={21}/><p>Each forecast checks dependencies, remaining effort, and the owner’s daily availability. Work on one task occupies that member until it finishes.</p></div><button disabled={!approve} className="button primary full-width" onClick={()=>{if(task&&approve){onApprove(task.id,owner);setOwner('');setDelay(0);}}}><CheckCircle size={18}/>Approve reassignment</button><p className="form-note">{approve?'Skill match confirmed. Capacity available. Forecast does not worsen.':delay>0?'Start-delay scenarios are preview-only. Set delay to 0 to approve a reassignment.':owner&&!member?.skills.includes(task?.skill||'')?'This member does not have the required skill.':owner&&over?'A member would remain over capacity. Try another assignment.':'Choose an unblocked, unstarted task and a qualified member with enough capacity.'}</p></div></section><div><section className="simulation-result"><SignalShader/><div className="eyebrow">RECALCULATED DELIVERY</div><div className="forecast-comparison"><div><small>Current plan</small><h2>{formatDate(base.date)}</h2><Pill tone={base.delay?'amber':'green'}>{base.delay?`${base.delay} days late`:'On time'}</Pill></div><ArrowRight size={26}/><div><small>Your scenario</small><h2>{formatDate(next.date)}</h2><Pill tone={next.delay?'amber':'green'}>{next.delay?`${next.delay} days late`:'On time'}</Pill></div></div><div className="simulation-result-foot"><CheckCircle size={17}/>{next.finish<base.finish?`${Math.round((base.finish-next.finish)*10)/10} days recovered in this schedule`:next.finish===base.finish?'Delivery forecast is unchanged':'This scenario moves delivery later'}</div></section><section className="panel comparison-panel"><div className="panel-heading"><div><h2>What changes for your team?</h2><p>Assigned effort before and after your scenario</p></div></div>{before.map(m=>{const a=after.find(x=>x.id===m.id)!;return <div className="compare-row" key={m.id}><Avatar id={m.id} project={project}/><strong>{m.name.split(' ')[0]}</strong><span>{m.assigned}h <small>({m.utilization}%)</small></span><ArrowRight size={15}/><span className={a.utilization>100?'amber-text':'green-text'}>{a.assigned}h <small>({a.utilization}%)</small></span></div>;})}</section><section className="panel schedule-preview"><div className="panel-heading"><div><h2>Why the date changes</h2><p>Start and finish offsets from 23 Oct · Uniform daily capacity</p></div></div>{hypothetical.tasks.filter(t=>t.status!=='Done').map(t=><div className="schedule-row" key={t.id}><span>{t.title}</span><div><i style={{marginLeft:`${next.tasks[t.id].start/Math.max(next.finish,1)*100}%`,width:`${(next.tasks[t.id].finish-next.tasks[t.id].start)/Math.max(next.finish,1)*100}%`}}/></div><small>{next.tasks[t.id].start.toFixed(1)}–{next.tasks[t.id].finish.toFixed(1)}d</small></div>)}</section></div></div>;
+          {view === "Overview" && (
+            <>
+              <section className="metrics page-enter">
+                <div className="metric">
+                  <div className="metric-label">
+                    Project completion{" "}
+                    <span className="mini-trend">
+                      <ArrowUpRight size={14} /> In motion
+                    </span>
+                  </div>
+                  <div className="metric-value">
+                    <CountUp to={progress} duration={1} />
+                    <span>%</span>
+                    <small>
+                      {completed} of {project.tasks.length} tasks
+                    </small>
+                  </div>
+                  <div className="mini-progress">
+                    <span style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="metric-label">
+                    Forecast delivery <CalendarBlank size={17} />
+                  </div>
+                  <div className="metric-value date-value">
+                    {formatDate(plan.date)}
+                    <Pill tone={plan.delay ? "amber" : "green"}>
+                      {plan.delay ? `+${plan.delay} days` : "On time"}
+                    </Pill>
+                  </div>
+                  <small>Based on effort & dependencies</small>
+                </div>
+                <div className="metric">
+                  <div className="metric-label">
+                    Team capacity <UsersThree size={18} />
+                  </div>
+                  <div className="metric-value">
+                    <CountUp
+                      to={Math.round(
+                        (loads.reduce((s, m) => s + m.assigned, 0) /
+                          project.members.reduce((s, m) => s + m.capacity, 0)) *
+                          100,
+                      )}
+                      duration={1}
+                    />
+                    <span>%</span>
+                    <small>of weekly availability</small>
+                  </div>
+                  <div className="metric-note">
+                    <i className="amber-dot" />
+                    {loads.filter((m) => m.utilization > 100).length} member
+                    over capacity
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="metric-label">
+                    Unresolved blockers <WarningCircle size={18} />
+                  </div>
+                  <div className="metric-value">
+                    <CountUp to={risk.blockers.length} duration={0.8} />
+                    <span className="metric-description">needs attention</span>
+                  </div>
+                  <button
+                    className="text-button"
+                    onClick={() => navigate("Dependencies")}
+                  >
+                    View dependencies <ArrowRight size={14} />
+                  </button>
+                </div>
+              </section>
+              {suggestions[0] && (
+                <div className="insight-banner page-enter">
+                  <span className="insight-icon">
+                    <Lightning size={22} weight="fill" />
+                  </span>
+                  <div>
+                    <strong>A little balance can make a big difference.</strong>
+                    <p>
+                      {
+                        project.members
+                          .find((m) => m.id === suggestions[0].from)
+                          ?.name.split(" ")[0]
+                      }{" "}
+                      is over capacity. Moving “{suggestions[0].task.title}” to{" "}
+                      {
+                        project.members
+                          .find((m) => m.id === suggestions[0].to)
+                          ?.name.split(" ")[0]
+                      }{" "}
+                      could free up {suggestions[0].task.remaining} hours.
+                    </p>
+                  </div>
+                  <button onClick={() => navigate("What-If simulator")}>
+                    Explore suggestion <ArrowUpRight size={17} />
+                  </button>
+                </div>
+              )}
+              <div className="overview-grid">
+                <section className="panel progress-panel page-enter">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Milestone progress</h2>
+                      <p>Accepted effort against the planned total</p>
+                    </div>
+                    <span className="chart-legend">
+                      <i />
+                      Completed <i className="legend-gray" />
+                      Remaining
+                    </span>
+                  </div>
+                  <MilestoneChart project={project} />
+                  <div className="chart-footer">
+                    <span>
+                      <i className="green-dot" />
+                      Planned milestones
+                    </span>
+                    <span>
+                      {
+                        project.tasks.filter((t) => t.status === "In progress")
+                          .length
+                      }{" "}
+                      tasks in progress <ArrowUpRight size={14} />
+                    </span>
+                  </div>
+                </section>
+                <section className="panel workload-panel page-enter">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Workload balance</h2>
+                      <p>Remaining effort / weekly capacity</p>
+                    </div>
+                    <button
+                      aria-label="View workload"
+                      onClick={() => navigate("Team & workload")}
+                    >
+                      <ArrowUpRight size={19} />
+                    </button>
+                  </div>
+                  {loads.map((m) => (
+                    <div className="workload-row" key={m.id}>
+                      <div className="workload-person">
+                        <Avatar id={m.id} project={project} />
+                        <div>
+                          <strong>{m.name.split(" ")[0]}</strong>
+                          <small>
+                            {m.assigned}h / {m.capacity}h
+                          </small>
+                        </div>
+                        <span
+                          className={m.utilization > 100 ? "overloaded" : ""}
+                        >
+                          {m.utilization}%
+                        </span>
+                      </div>
+                      <div className="workload-bar">
+                        <span
+                          className={m.utilization > 100 ? "over" : "normal"}
+                          style={{
+                            width: `${Math.min(m.utilization / 1.5, 100)}%`,
+                          }}
+                        />
+                        <i style={{ left: "66.66%" }} />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="capacity-legend">
+                    <span>
+                      <i />
+                      Within capacity
+                    </span>
+                    <span>
+                      <i />
+                      Over capacity
+                    </span>
+                    <small>│ 100% capacity</small>
+                  </div>
+                </section>
+                <section className="panel task-panel page-enter">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>
+                        Focus for the team{" "}
+                        <span className="count-bubble">
+                          {
+                            project.tasks.filter((t) => t.status !== "Done")
+                              .length
+                          }
+                        </span>
+                      </h2>
+                      <p>The next steps that move your project forward</p>
+                    </div>
+                    <button
+                      className="text-button"
+                      onClick={() => navigate("Task board")}
+                    >
+                      View board <ArrowRight size={14} />
+                    </button>
+                  </div>
+                  <div className="focus-table">
+                    <div className="table-head">
+                      <span>Task</span>
+                      <span>Owner</span>
+                      <span>Due</span>
+                      <span>Status</span>
+                    </div>
+                    {project.tasks
+                      .filter((t) => t.status !== "Done")
+                      .slice(0, 4)
+                      .map((t) => (
+                        <button
+                          className="task-table-row"
+                          key={t.id}
+                          onClick={() => setSelected(t.id)}
+                        >
+                          <span>
+                            <Circle
+                              size={17}
+                              weight={t.blocker ? "fill" : "regular"}
+                              className={t.blocker ? "amber-text" : ""}
+                            />
+                            <span>
+                              <strong>{t.title}</strong>
+                              <small>
+                                {t.id} <b>·</b> {t.effort}h estimated
+                              </small>
+                            </span>
+                          </span>
+                          <span>
+                            <Avatar id={t.owner} project={project} />
+                          </span>
+                          <span>{formatDate(t.due)}</span>
+                          <span>
+                            <Pill
+                              tone={
+                                t.blocker
+                                  ? "amber"
+                                  : t.status === "In progress"
+                                    ? "sage"
+                                    : "neutral"
+                              }
+                            >
+                              {t.blocker ? "Blocked" : t.status}
+                            </Pill>
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                </section>
+                <section className="panel milestone-panel page-enter">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Milestones</h2>
+                      <p>Small steps. A shared finish line.</p>
+                    </div>
+                    <Target size={18} />
+                  </div>
+                  {["Foundation", "Working prototype", "Ready to ship"].map(
+                    (m, i) => {
+                      const tasks = project.tasks.filter(
+                        (t) => t.milestone === m,
+                      );
+                      const done = tasks.filter(
+                        (t) => t.status === "Done",
+                      ).length;
+                      const percent = tasks.length
+                        ? Math.round((done / tasks.length) * 100)
+                        : 0;
+                      return (
+                        <div className="milestone" key={m}>
+                          <div
+                            className={`milestone-point ${percent === 100 ? "complete" : ""}`}
+                          >
+                            {percent === 100 ? <Check size={12} /> : i + 1}
+                          </div>
+                          <div>
+                            <strong>{m}</strong>
+                            <small>
+                              {i === 0
+                                ? "Set up & align"
+                                : i === 1
+                                  ? "Build the core experience"
+                                  : "Review, test & deliver"}
+                            </small>
+                            <div className="milestone-progress">
+                              <span style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+                          <span>
+                            {percent === 100 ? (
+                              <Pill tone="green">Done</Pill>
+                            ) : (
+                              <small>{percent}%</small>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    },
+                  )}
+                  <div className="milestone-foot">
+                    <CalendarBlank size={15} />
+                    Project deadline{" "}
+                    <strong>{formatDate(project.deadline)}</strong>
+                  </div>
+                </section>
+                <section className="panel activity-panel page-enter">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Recently, on your team</h2>
+                      <p>The work behind the progress</p>
+                    </div>
+                    <button
+                      className="text-button"
+                      onClick={() => navigate("Activity")}
+                    >
+                      All activity <ArrowRight size={14} />
+                    </button>
+                  </div>
+                  {project.activity.slice(0, 3).map((a) => (
+                    <ActivityRow key={a.id} activity={a} project={project} />
+                  ))}
+                </section>
+                <section className="simulator-card page-enter">
+                  <SignalShader />
+                  <span className="sim-card-icon">
+                    <Flask size={24} />
+                  </span>
+                  <div>
+                    <h2>
+                      What if you tried
+                      <br />a different plan?
+                    </h2>
+                    <p>
+                      Explore changes to your team’s workload
+                      <br />
+                      before making them real.
+                    </p>
+                    <CornerButton
+                      accentColor="#e9eddf"
+                      icon={<ArrowUpRight size={17} />}
+                      onClick={() => navigate("What-If simulator")}
+                    >
+                      Open simulator
+                    </CornerButton>
+                  </div>
+                  <span className="sim-card-foot">
+                    CALCULATED, NOT GUESSED.
+                  </span>
+                </section>
+              </div>
+            </>
+          )}
+
+          {view === "Task board" && (
+            <>
+              <div className="board-toolbar">
+                <div className="search-field">
+                  <MagnifyingGlass size={17} />
+                  <input
+                    aria-label="Search tasks"
+                    placeholder="Find a task…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <select
+                  aria-label="Filter by member"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option>All members</option>
+                  {project.members.map((m) => (
+                    <option value={m.id} key={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="muted">
+                  Drag tasks between columns or open a card to edit
+                </span>
+              </div>
+              <div className="kanban-grid">
+                {statuses.map((status) => (
+                  <section
+                    className="kanban-column"
+                    key={status}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const t = project.tasks.find(
+                        (t) => t.id === e.dataTransfer.getData("text/plain"),
+                      );
+                      if (t)
+                        saveTask({
+                          ...t,
+                          status,
+                          remaining:
+                            status === "Done" ? 0 : t.remaining || t.effort,
+                        });
+                    }}
+                  >
+                    <h2>
+                      <i
+                        className={`status-dot status-${status.replaceAll(" ", "-")}`}
+                      />
+                      {status}
+                      <span>
+                        {filtered.filter((t) => t.status === status).length}
+                      </span>
+                      <button
+                        aria-label={`Add ${status} task`}
+                        onClick={() => setModal("task")}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </h2>
+                    {filtered
+                      .filter((t) => t.status === status)
+                      .map((t) => (
+                        <button
+                          className="task-card"
+                          key={t.id}
+                          draggable
+                          onDragStart={(e) =>
+                            e.dataTransfer.setData("text/plain", t.id)
+                          }
+                          onClick={() => setSelected(t.id)}
+                        >
+                          <div className="task-card-top">
+                            <span>{t.id}</span>
+                            <span className={`priority priority-${t.priority}`}>
+                              {t.priority}
+                            </span>
+                          </div>
+                          <h3>{t.title}</h3>
+                          {t.blocker && (
+                            <div className="blocker-label">
+                              <WarningCircle size={13} />
+                              Blocked
+                            </div>
+                          )}
+                          <div className="task-tags">
+                            <span>{t.skill}</span>
+                            <span>{t.remaining}h left</span>
+                          </div>
+                          <div className="task-card-foot">
+                            <Avatar id={t.owner} project={project} />
+                            <span>
+                              <CalendarBlank size={13} />
+                              {formatDate(t.due)}
+                            </span>
+                            {t.comments.length > 0 && (
+                              <span>
+                                <ChatCircle size={13} />
+                                {t.comments.length}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    <button
+                      className="add-task-quiet"
+                      onClick={() => setModal("task")}
+                    >
+                      <Plus size={14} /> Add task
+                    </button>
+                  </section>
+                ))}
+              </div>
+            </>
+          )}
+          {view === "Dependencies" && (
+            <section className="panel graph-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>The path to delivery</h2>
+                  <p>
+                    Drag a connection from a task’s bottom handle to another
+                    task’s top handle. Circular links are rejected.
+                  </p>
+                </div>
+                <Pill tone="amber">{risk.blockers.length} blocker</Pill>
+              </div>
+              <DependencyGraph
+                project={project}
+                onSelect={setSelected}
+                onConnect={(c) => {
+                  if (!c.source || !c.target) return;
+                  const target = project.tasks.find((t) => t.id === c.target)!;
+                  if (target.dependencies.includes(c.source)) return;
+                  saveTask({
+                    ...target,
+                    dependencies: [...target.dependencies, c.source],
+                  });
+                }}
+              />
+              <div className="graph-details">
+                {risk.blockers.map((t) => (
+                  <button key={t.id} onClick={() => setSelected(t.id)}>
+                    <WarningCircle size={20} />
+                    <div>
+                      <strong>{t.title}</strong>
+                      <p>{t.blocker}</p>
+                    </div>
+                    <span>
+                      Resolve blocker <ArrowUpRight size={16} />
+                    </span>
+                  </button>
+                ))}
+                {!risk.blockers.length && (
+                  <p>
+                    No manual blockers. Dependency constraints still apply to
+                    the forecast.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+          {view === "Team & workload" && (
+            <>
+              <div className="two-column">
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Team availability</h2>
+                      <p>
+                        Edit hours available over the next five working days
+                      </p>
+                    </div>
+                  </div>
+                  {loads.map((m) => (
+                    <div key={m.id} className="member-detail">
+                      <Avatar id={m.id} project={project} size="large" />
+                      <div>
+                        <h3>{m.name}</h3>
+                        <p>{m.role}</p>
+                        <div className="task-tags">
+                          {m.skills.map((s) => (
+                            <span key={s}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <label>
+                        Hours / week
+                        <input
+                          aria-label={`${m.name} weekly capacity`}
+                          type="number"
+                          min="1"
+                          max="80"
+                          value={m.capacity}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            if (v >= 1 && v <= 80)
+                              update((p) => ({
+                                ...p,
+                                members: p.members.map((x) =>
+                                  x.id === m.id ? { ...x, capacity: v } : x,
+                                ),
+                              }));
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </section>
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Capacity breakdown</h2>
+                      <p>Blocked effort is visible, not counted as free time</p>
+                    </div>
+                  </div>
+                  {loads.map((m) => (
+                    <div className="capacity-detail" key={m.id}>
+                      <div>
+                        <strong>{m.name.split(" ")[0]}</strong>
+                        <Pill tone={m.utilization > 100 ? "amber" : "green"}>
+                          {m.utilization}% assigned
+                        </Pill>
+                      </div>
+                      <div className="stacked-bar">
+                        <span
+                          style={{
+                            width: `${(m.ready / Math.max(m.assigned, m.capacity)) * 100}%`,
+                          }}
+                        />
+                        <span
+                          className="blocked-segment"
+                          style={{
+                            width: `${(m.blocked / Math.max(m.assigned, m.capacity)) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <p>
+                        {m.ready}h ready · {m.blocked}h blocked or waiting ·{" "}
+                        {m.capacity}h capacity
+                      </p>
+                    </div>
+                  ))}
+                </section>
+              </div>
+              <RecoverySuggestions
+                project={project}
+                onExplore={() => navigate("What-If simulator")}
+              />
+            </>
+          )}
+          {view === "Contributions" && (
+            <>
+              <div className="evidence-intro">
+                <span>
+                  <ChartBar size={25} />
+                </span>
+                <div>
+                  <h2>Good teamwork has more than one measure.</h2>
+                  <p>
+                    Delivered effort, reviews, documentation, and helping
+                    teammates are shown separately. These records support a
+                    conversation, never an automatic grade.
+                  </p>
+                </div>
+              </div>
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Contribution evidence</h2>
+                    <p>
+                      Sample and locally recorded evidence · All project
+                      activity
+                    </p>
+                  </div>
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      download(
+                        "contrigraph-contributions.csv",
+                        "Member,Delivered effort (h),Reviews,Documentation,Blockers resolved\n" +
+                          evidence
+                            .map(
+                              (m) =>
+                                `${m.name},${m.delivered},${m.reviews},${m.docs},${m.help}`,
+                            )
+                            .join("\n"),
+                        "text/csv",
+                      )
+                    }
+                  >
+                    Export CSV <DownloadSimple />
+                  </button>
+                </div>
+                <div className="evidence-table">
+                  <div className="evidence-row evidence-head">
+                    <span>Team member</span>
+                    <span>Delivered effort</span>
+                    <span>Reviews</span>
+                    <span>Documentation</span>
+                    <span>Blockers resolved</span>
+                  </div>
+                  {evidence.map((m) => (
+                    <div className="evidence-row" key={m.id}>
+                      <span>
+                        <Avatar id={m.id} project={project} />
+                        <strong>{m.name}</strong>
+                      </span>
+                      <span>
+                        <b>{m.delivered}</b> h
+                      </span>
+                      <span>{m.reviews}</span>
+                      <span>{m.docs}</span>
+                      <span>{m.help}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="panel evidence-log">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Behind the numbers</h2>
+                    <p>Every event links back to the task it concerns</p>
+                  </div>
+                </div>
+                {project.activity
+                  .filter((a) =>
+                    [
+                      "completed",
+                      "reviewed",
+                      "documented",
+                      "unblocked",
+                    ].includes(a.kind),
+                  )
+                  .map((a) => (
+                    <button
+                      className="evidence-event"
+                      key={a.id}
+                      onClick={() => setSelected(a.task)}
+                    >
+                      <ActivityRow activity={a} project={project} />
+                      <ArrowUpRight />
+                    </button>
+                  ))}
+              </section>
+            </>
+          )}
+          {view === "Activity" && (
+            <section className="panel full-activity">
+              <div className="panel-heading">
+                <div>
+                  <h2>Project activity</h2>
+                  <p>
+                    {project.activity.length} events in this device’s project
+                    history
+                  </p>
+                </div>
+                <Pill tone="neutral">Local demo history</Pill>
+              </div>
+              {project.activity.length ? (
+                project.activity.map((a) => (
+                  <button
+                    className="evidence-event"
+                    key={a.id}
+                    onClick={() => setSelected(a.task)}
+                  >
+                    <ActivityRow activity={a} project={project} />
+                    <ArrowUpRight />
+                  </button>
+                ))
+              ) : (
+                <div className="empty-state">
+                  Create your first task to start the project history.
+                </div>
+              )}
+            </section>
+          )}
+          {view === "What-If simulator" && (
+            <Simulator project={project} onApprove={reassign} />
+          )}
+          <footer className="page-footer">
+            <span>
+              <span className="footer-logo">◈</span> Built for teams. Made for
+              progress.
+            </span>
+            <span>
+              ContriGraph <b>·</b> TechTrix 2026 <b>·</b> Local demo
+            </span>
+          </footer>
+        </main>
+      </div>
+      {toast && (
+        <div className="toast" role="status">
+          <CheckCircle size={19} />
+          {toast}
+          <button aria-label="Dismiss message" onClick={() => setToast("")}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      {(modal || chosen) && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            setModal(null);
+            setSelected(null);
+          }}
+        >
+          <section
+            className={`modal ${modal === "report" ? "report-modal" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              chosen
+                ? "Task details"
+                : modal === "task"
+                  ? "Create task"
+                  : modal === "project"
+                    ? "Create project"
+                    : modal === "report"
+                      ? "Performance report"
+                      : "Project settings"
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              aria-label="Close dialog"
+              onClick={() => {
+                setModal(null);
+                setSelected(null);
+              }}
+            >
+              <X size={21} />
+            </button>
+            {(modal === "task" || chosen) && (
+              <TaskEditor
+                key={chosen?.id || "new"}
+                task={chosen}
+                project={project}
+                onSave={saveTask}
+                onComment={(text, kind) => {
+                  if (!chosen || !text.trim()) return;
+                  update((p) =>
+                    log(
+                      {
+                        ...p,
+                        tasks: p.tasks.map((t) =>
+                          t.id === chosen.id
+                            ? {
+                                ...t,
+                                comments: [
+                                  ...t.comments,
+                                  {
+                                    author: "om",
+                                    text: text.trim(),
+                                    time: new Date().toISOString(),
+                                  },
+                                ],
+                              }
+                            : t,
+                        ),
+                      },
+                      chosen.id,
+                      kind,
+                      `${kind === "reviewed" ? "reviewed" : kind === "documented" ? "documented" : kind === "unblocked" ? "helped resolve a blocker on" : "commented on"} ${chosen.title}`,
+                    ),
+                  );
+                  setToast("Evidence recorded.");
+                }}
+              />
+            )}
+            {modal === "project" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const d = new FormData(e.currentTarget);
+                  const p: Project = {
+                    name: String(d.get("name")).trim(),
+                    description: String(d.get("description")).trim(),
+                    deadline: String(d.get("deadline")),
+                    members: structuredClone(seed.members),
+                    tasks: [],
+                    activity: [],
+                  };
+                  if (!p.name) return;
+                  setProjects((all) => [...all, p]);
+                  setActive(projects.length);
+                  setView("Overview");
+                  setModal(null);
+                  setToast("Project created. Add tasks to start planning.");
+                }}
+              >
+                <div className="eyebrow">A NEW CHAPTER</div>
+                <h2>Create a project</h2>
+                <p>Give your team a shared direction.</p>
+                <label>
+                  Project name
+                  <input
+                    name="name"
+                    required
+                    maxLength={70}
+                    autoFocus
+                    placeholder="What are you building?"
+                  />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    name="description"
+                    maxLength={240}
+                    placeholder="A little context for the team"
+                  />
+                </label>
+                <label>
+                  Deadline
+                  <input
+                    type="date"
+                    name="deadline"
+                    defaultValue="2026-11-06"
+                    required
+                    min={TODAY}
+                  />
+                </label>
+                <p className="form-note">
+                  Your workspace’s three members will join this project.
+                </p>
+                <button className="button primary" type="submit">
+                  Create project <ArrowRight />
+                </button>
+              </form>
+            )}
+            {modal === "settings" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const d = new FormData(e.currentTarget);
+                  update((p) => ({
+                    ...p,
+                    name: String(d.get("name")).trim() || p.name,
+                    description: String(d.get("description")),
+                    deadline: String(d.get("deadline")),
+                  }));
+                  setModal(null);
+                  setToast("Project settings saved.");
+                }}
+              >
+                <div className="eyebrow">WORKSPACE</div>
+                <h2>Project settings</h2>
+                <p>Manage the current project and your local data.</p>
+                <label>
+                  Project name
+                  <input
+                    name="name"
+                    defaultValue={project.name}
+                    required
+                    maxLength={70}
+                  />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    name="description"
+                    defaultValue={project.description}
+                    maxLength={240}
+                  />
+                </label>
+                <label>
+                  Project deadline
+                  <input
+                    name="deadline"
+                    type="date"
+                    defaultValue={project.deadline}
+                    required
+                  />
+                </label>
+                <div className="storage-note">
+                  <strong>Local prototype</strong>
+                  <p>
+                    Data and attachments stay in this browser. Shared accounts,
+                    live sync, and server-enforced audit history need a
+                    connected backend.
+                  </p>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() =>
+                      download(
+                        "contrigraph-backup.json",
+                        JSON.stringify(projects, null, 2),
+                        "application/json",
+                      )
+                    }
+                  >
+                    Download workspace backup <DownloadSimple />
+                  </button>
+                  <div className="ui-credits">
+                    <SkiperLink href="https://skiper-ui.com/v1/skiper40">
+                      Skiper UI
+                    </SkiperLink>
+                    <SkiperLink href="https://www.vengenceui.com">
+                      Vengeance UI
+                    </SkiperLink>
+                    <SkiperLink href="https://reactbits.dev">
+                      React Bits
+                    </SkiperLink>
+                  </div>
+                </div>
+                <button className="button primary" type="submit">
+                  Save settings <Check />
+                </button>
+              </form>
+            )}
+            {modal === "report" && (
+              <>
+                <div className="eyebrow">PROJECT PERFORMANCE</div>
+                <h2>{project.name} report</h2>
+                <p>
+                  Calculated from current tasks, estimates, capacity, and
+                  recorded evidence.
+                </p>
+                <div className="report-stats">
+                  <div>
+                    <small>Completion</small>
+                    <strong>{progress}%</strong>
+                  </div>
+                  <div>
+                    <small>Delivery forecast</small>
+                    <strong>{formatDate(plan.date)}</strong>
+                  </div>
+                  <div>
+                    <small>Deadline variance</small>
+                    <strong>+{plan.delay} days</strong>
+                  </div>
+                </div>
+                <h3>Health: {risk.label}</h3>
+                {risk.reasons.map((r) => (
+                  <p className="report-reason" key={r}>
+                    <WarningCircle size={16} />
+                    {r}
+                  </p>
+                ))}
+                <h3>Team workload & contribution</h3>
+                {evidence.map((m) => (
+                  <p className="report-member" key={m.id}>
+                    <strong>{m.name}</strong>
+                    <span>
+                      {loads.find((x) => x.id === m.id)?.utilization}% capacity
+                      · {m.delivered}h delivered · {m.reviews} reviews ·{" "}
+                      {m.docs} docs · {m.help} blockers resolved
+                    </span>
+                  </p>
+                ))}
+                <h3>Recommended recovery</h3>
+                <p>
+                  {suggestions[0]
+                    ? `Move ${suggestions[0].task.title} to ${project.members.find((m) => m.id === suggestions[0].to)?.name}. Recalculated delivery: ${formatDate(dateAfter(suggestions[0].finish))}.`
+                    : "No feasible redistribution found. Review scope, availability, estimates, or the deadline with your team."}
+                </p>
+                <p className="form-note">
+                  Forecast uses a greedy schedule, uniform daily availability,
+                  uninterrupted tasks, and calendar-day offsets. Estimates are
+                  not delivery guarantees.
+                </p>
+                <button
+                  className="button primary"
+                  onClick={() =>
+                    download(
+                      "contrigraph-report.json",
+                      JSON.stringify(report(), null, 2),
+                      "application/json",
+                    )
+                  }
+                >
+                  Download report <DownloadSimple />
+                </button>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function TaskEditor({task,project,onSave,onComment}:{task?:Task;project:Project;onSave:(t:Task)=>void;onComment:(text:string,kind:Activity['kind'])=>void}){const [comment,setComment]=useState('');const [kind,setKind]=useState<Activity['kind']>('commented');const [files,setFiles]=useState(task?.files||[]);const [fileError,setFileError]=useState('');function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);const effort=Number(data.get('effort'));const status=String(data.get('status')) as Status;onSave({id:task?.id||`CG-${crypto.randomUUID().slice(0,6).toUpperCase()}`,title:String(data.get('title')).trim(),description:String(data.get('description')),owner:String(data.get('owner')),effort,remaining:status==='Done'?0:Number(data.get('remaining')),status,priority:String(data.get('priority')) as Task['priority'],due:String(data.get('due')),dependencies:data.getAll('dependencies').map(String),skill:String(data.get('skill')),milestone:String(data.get('milestone')),release:Number(data.get('release')),blocker:String(data.get('blocker')).trim()||undefined,comments:task?.comments||[],files});}
- return <><div className="eyebrow">{task?.id||'MAKE THE NEXT STEP CLEAR'}</div><h2>{task?'Task details':'Create a task'}</h2><form onSubmit={submit}><label>Task title<input name="title" required autoFocus maxLength={120} defaultValue={task?.title} placeholder="What needs to get done?"/></label><label>Description<textarea name="description" defaultValue={task?.description} placeholder="What does done look like?" maxLength={3000}/></label><div className="form-grid"><label>Owner<select name="owner" defaultValue={task?.owner||'om'}>{project.members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Status<select name="status" defaultValue={task?.status||'To do'}>{statuses.map(s=><option key={s}>{s}</option>)}</select></label><label>Priority<select name="priority" defaultValue={task?.priority||'Medium'}>{['High','Medium','Low'].map(s=><option key={s}>{s}</option>)}</select></label><label>Due date<input name="due" type="date" required defaultValue={task?.due||project.deadline}/></label><label>Estimated effort (hours)<input name="effort" type="number" required min="0.5" max="500" step="0.5" defaultValue={task?.effort||4}/></label><label>Remaining effort (hours)<input name="remaining" type="number" required min="0" max="500" step="0.5" defaultValue={task?.remaining??4}/></label><label>Required skill<select name="skill" defaultValue={task?.skill||'development'}>{['development','backend','frontend','testing','database'].map(s=><option key={s}>{s}</option>)}</select></label><label>Milestone<select name="milestone" defaultValue={task?.milestone||'Working prototype'}>{['Foundation','Working prototype','Ready to ship'].map(s=><option key={s}>{s}</option>)}</select></label></div><label>Depends on <select name="dependencies" multiple defaultValue={task?.dependencies||[]} className="dependencies-select">{project.tasks.filter(t=>t.id!==task?.id).map(t=><option key={t.id} value={t.id}>{t.id}: {t.title}</option>)}</select><small>Ctrl / Cmd + click to select or clear multiple prerequisites.</small></label><div className="form-grid"><label>Blocker<input name="blocker" defaultValue={task?.blocker} placeholder="What is stopping this task?" maxLength={240}/></label><label>Earliest start (days from today)<input name="release" type="number" min="0" max="365" defaultValue={task?.release||0}/></label></div><label className="file-label"><Paperclip size={16}/>Attach evidence (up to 1 MB per file)<input type="file" accept="image/*,.pdf,.txt,.csv,.md" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>1024*1024){setFileError('Choose a file smaller than 1 MB.');return;}if(files.length>=3){setFileError('Maximum 3 attachments per task.');return;}const reader=new FileReader();reader.onload=()=>setFiles(prev=>[...prev,{name:file.name,url:String(reader.result)}]);reader.readAsDataURL(file);setFileError('');}}/></label>{fileError&&<p className="amber-text">{fileError}</p>}{files.map((f,i)=><div className="file-row" key={i}><a href={f.url} download={f.name}><Paperclip size={14}/>{f.name}</a><button type="button" aria-label={`Remove ${f.name}`} onClick={()=>setFiles(files.filter((_,n)=>n!==i))}><X size={14}/></button></div>)}<button className="button primary full-width" type="submit">{task?'Save changes':'Create task'} <Check size={17}/></button></form>{task&&<div className="comments-section"><h3>Conversation & evidence</h3>{task.comments.map((c,i)=><div className="comment" key={i}><Avatar id={c.author} project={project}/><div><strong>{project.members.find(m=>m.id===c.author)?.name.split(' ')[0]}</strong><p>{c.text}</p></div></div>)}<textarea aria-label="Comment or contribution evidence" placeholder="Add context, a review, or evidence of your contribution…" value={comment} onChange={e=>setComment(e.target.value)} maxLength={2000}/><div className="comment-actions"><select aria-label="Evidence type" value={kind} onChange={e=>setKind(e.target.value as Activity['kind'])}><option value="commented">Comment</option><option value="reviewed">Review evidence</option><option value="documented">Documentation evidence</option><option value="unblocked">Blocker resolution evidence</option></select><button className="button secondary" disabled={!comment.trim()} onClick={()=>{onComment(comment,kind);setComment('');}}>Post <ArrowRight size={15}/></button></div><p className="form-note">Evidence is self-reported in this prototype. Only a server-backed review workflow can enforce independent approval.</p></div>}</>;
+function ActivityRow({
+  activity: a,
+  project,
+}: {
+  activity: Activity;
+  project: Project;
+}) {
+  const name =
+    project.members.find((m) => m.id === a.member)?.name.split(" ")[0] ||
+    "Team";
+  return (
+    <div className="activity-row">
+      <Avatar id={a.member} project={project} />
+      <div>
+        <p>
+          <strong>{name}</strong> {a.text}
+        </p>
+        <small>
+          {a.task} <b>·</b> {a.kind}
+        </small>
+      </div>
+      <time>
+        {new Date(a.time).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+        })}
+      </time>
+    </div>
+  );
+}
+function RecoverySuggestions({
+  project,
+  onExplore,
+}: {
+  project: Project;
+  onExplore: () => void;
+}) {
+  const suggestion = recommendations(project)[0];
+  return (
+    <section className="panel recovery-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Recommended next step</h2>
+          <p>Skills, capacity, dependencies, and forecast checked</p>
+        </div>
+        <Lightning size={20} />
+      </div>
+      <p>
+        {suggestion
+          ? `Move “${suggestion.task.title}” from ${project.members.find((m) => m.id === suggestion.from)?.name.split(" ")[0]} to ${project.members.find((m) => m.id === suggestion.to)?.name.split(" ")[0]}. The task fits their skills and available hours.`
+          : "No safe reassignment found. Consider reducing scope, increasing availability, or adjusting the deadline."}
+      </p>
+      <button className="button secondary" onClick={onExplore}>
+        Test in simulator <ArrowUpRight />
+      </button>
+    </section>
+  );
 }
 
+function DependencyGraph({
+  project,
+  onSelect,
+  onConnect,
+}: {
+  project: Project;
+  onSelect: (id: string) => void;
+  onConnect: (c: Connection) => void;
+}) {
+  const plan = schedule(project);
+  const ordered = topologicalSort(project.tasks);
+  const depth: Record<string, number> = {};
+  ordered.forEach(
+    (t) =>
+      (depth[t.id] = t.dependencies.length
+        ? Math.max(...t.dependencies.map((d) => depth[d])) + 1
+        : 0),
+  );
+  const rows: Record<number, number> = {};
+  const nodes = ordered.map((t) => {
+    const d = depth[t.id];
+    const row = rows[d] || 0;
+    rows[d] = row + 1;
+    return {
+      id: t.id,
+      position: { x: d * 300, y: row * 110 },
+      data: {
+        label: (
+          <div className="graph-node">
+            <small>
+              {t.id} · {t.remaining}h remaining
+            </small>
+            <strong>{t.title}</strong>
+            <span>
+              <i
+                className={
+                  t.status === "Done"
+                    ? "green-dot"
+                    : t.blocker
+                      ? "amber-dot"
+                      : "neutral-dot"
+                }
+              />
+              {t.blocker ? "Blocked" : t.status} <b>·</b> Day{" "}
+              {Math.ceil(plan.tasks[t.id].finish)}
+            </span>
+          </div>
+        ),
+      },
+      style: {
+        width: 245,
+        borderRadius: 10,
+        border: t.blocker ? "1px solid #d9a45c" : "1px solid #dedfd7",
+        background: t.status === "Done" ? "#f0f4eb" : "#fff",
+        padding: 0,
+      },
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Top,
+    };
+  });
+  const edges = project.tasks.flatMap((t) =>
+    t.dependencies.map((d) => ({
+      id: `${d}-${t.id}`,
+      source: d,
+      target: t.id,
+      type: "smoothstep",
+      animated: !!project.tasks.find((x) => x.id === d)?.blocker,
+      style: {
+        stroke: project.tasks.find((x) => x.id === d)?.blocker
+          ? "#c28235"
+          : "#aaa99e",
+        strokeWidth: 1.5,
+      },
+      markerEnd: { type: MarkerType.ArrowClosed },
+    })),
+  );
+  return (
+    <div className="dependency-canvas">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onConnect={onConnect}
+        onNodeClick={(_, n) => onSelect(n.id)}
+        fitView
+        fitViewOptions={{ padding: 0.12 }}
+        minZoom={0.25}
+        maxZoom={1.5}
+      >
+        <Background gap={20} color="#dddcd5" />
+        <Controls showInteractive={false} />
+      </ReactFlow>
+    </div>
+  );
+}
 
+function Simulator({
+  project,
+  onApprove,
+}: {
+  project: Project;
+  onApprove: (id: string, to: string) => void;
+}) {
+  const options = recommendations(project);
+  const [taskId, setTaskId] = useState(
+    options[0]?.task.id ||
+      project.tasks.find((t) => t.status !== "Done")?.id ||
+      "",
+  );
+  const [owner, setOwner] = useState(options[0]?.to || "");
+  const [delay, setDelay] = useState(0);
+  const base = schedule(project);
+  const task = project.tasks.find((t) => t.id === taskId);
+  const member = project.members.find((m) => m.id === owner);
+  const valid =
+    !!task &&
+    !!member &&
+    member.id !== task.owner &&
+    member.skills.includes(task.skill) &&
+    delay === 0 &&
+    task.status === "To do" &&
+    !task.blocker &&
+    task.dependencies.every(
+      (id) => project.tasks.find((t) => t.id === id)?.status === "Done",
+    );
+  const hypothetical = {
+    ...project,
+    tasks: project.tasks.map((t) =>
+      t.id === taskId
+        ? { ...t, owner: owner || t.owner, release: t.release + delay }
+        : t,
+    ),
+  };
+  const next = schedule(hypothetical);
+  const before = workload(project);
+  const after = workload(hypothetical);
+  const over = after.some((m) => m.utilization > 100);
+  const approve = valid && !over && next.finish <= base.finish;
+  return (
+    <div className="simulator-layout">
+      <section className="panel simulation-controls">
+        <div className="panel-heading">
+          <div>
+            <h2>Your scenario</h2>
+            <p>Changes stay hypothetical until approved</p>
+          </div>
+          <Flask size={22} />
+        </div>
+        <div className="simulation-form">
+          <label>
+            Task to explore
+            <select
+              value={taskId}
+              onChange={(e) => {
+                setTaskId(e.target.value);
+                setOwner("");
+              }}
+            >
+              {project.tasks
+                .filter((t) => t.status !== "Done")
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Try a different owner
+            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+              <option value="">Keep current owner</option>
+              {project.members
+                .filter((m) => m.id !== task?.owner)
+                .map((m) => (
+                  <option value={m.id} key={m.id}>
+                    {m.name}{" "}
+                    {m.skills.includes(task?.skill || "")
+                      ? ""
+                      : "(skill mismatch)"}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Additional start delay <strong>{delay} days</strong>
+            <input
+              type="range"
+              min="0"
+              max="7"
+              step="1"
+              value={delay}
+              onChange={(e) => setDelay(Number(e.target.value))}
+            />
+            <span className="range-labels">
+              <small>No extra delay</small>
+              <small>7 days</small>
+            </span>
+          </label>
+          <div className="simulation-rule">
+            <GitBranch size={21} />
+            <p>
+              Each forecast checks dependencies, remaining effort, and the
+              owner’s daily availability. Work on one task occupies that member
+              until it finishes.
+            </p>
+          </div>
+          <button
+            disabled={!approve}
+            className="button primary full-width"
+            onClick={() => {
+              if (task && approve) {
+                onApprove(task.id, owner);
+                setOwner("");
+                setDelay(0);
+              }
+            }}
+          >
+            <CheckCircle size={18} />
+            Approve reassignment
+          </button>
+          <p className="form-note">
+            {approve
+              ? "Skill match confirmed. Capacity available. Forecast does not worsen."
+              : delay > 0
+                ? "Start-delay scenarios are preview-only. Set delay to 0 to approve a reassignment."
+                : owner && !member?.skills.includes(task?.skill || "")
+                  ? "This member does not have the required skill."
+                  : owner && over
+                    ? "A member would remain over capacity. Try another assignment."
+                    : "Choose an unblocked, unstarted task and a qualified member with enough capacity."}
+          </p>
+        </div>
+      </section>
+      <div>
+        <section className="simulation-result">
+          <SignalShader />
+          <div className="eyebrow">RECALCULATED DELIVERY</div>
+          <div className="forecast-comparison">
+            <div>
+              <small>Current plan</small>
+              <h2>{formatDate(base.date)}</h2>
+              <Pill tone={base.delay ? "amber" : "green"}>
+                {base.delay ? `${base.delay} days late` : "On time"}
+              </Pill>
+            </div>
+            <ArrowRight size={26} />
+            <div>
+              <small>Your scenario</small>
+              <h2>{formatDate(next.date)}</h2>
+              <Pill tone={next.delay ? "amber" : "green"}>
+                {next.delay ? `${next.delay} days late` : "On time"}
+              </Pill>
+            </div>
+          </div>
+          <div className="simulation-result-foot">
+            <CheckCircle size={17} />
+            {next.finish < base.finish
+              ? `${Math.round((base.finish - next.finish) * 10) / 10} days recovered in this schedule`
+              : next.finish === base.finish
+                ? "Delivery forecast is unchanged"
+                : "This scenario moves delivery later"}
+          </div>
+        </section>
+        <section className="panel comparison-panel">
+          <div className="panel-heading">
+            <div>
+              <h2>What changes for your team?</h2>
+              <p>Assigned effort before and after your scenario</p>
+            </div>
+          </div>
+          {before.map((m) => {
+            const a = after.find((x) => x.id === m.id)!;
+            return (
+              <div className="compare-row" key={m.id}>
+                <Avatar id={m.id} project={project} />
+                <strong>{m.name.split(" ")[0]}</strong>
+                <span>
+                  {m.assigned}h <small>({m.utilization}%)</small>
+                </span>
+                <ArrowRight size={15} />
+                <span
+                  className={a.utilization > 100 ? "amber-text" : "green-text"}
+                >
+                  {a.assigned}h <small>({a.utilization}%)</small>
+                </span>
+              </div>
+            );
+          })}
+        </section>
+        <section className="panel schedule-preview">
+          <div className="panel-heading">
+            <div>
+              <h2>Why the date changes</h2>
+              <p>
+                Start and finish offsets from 23 Oct · Uniform daily capacity
+              </p>
+            </div>
+          </div>
+          {hypothetical.tasks
+            .filter((t) => t.status !== "Done")
+            .map((t) => (
+              <div className="schedule-row" key={t.id}>
+                <span>{t.title}</span>
+                <div>
+                  <i
+                    style={{
+                      marginLeft: `${(next.tasks[t.id].start / Math.max(next.finish, 1)) * 100}%`,
+                      width: `${((next.tasks[t.id].finish - next.tasks[t.id].start) / Math.max(next.finish, 1)) * 100}%`,
+                    }}
+                  />
+                </div>
+                <small>
+                  {next.tasks[t.id].start.toFixed(1)}–
+                  {next.tasks[t.id].finish.toFixed(1)}d
+                </small>
+              </div>
+            ))}
+        </section>
+      </div>
+    </div>
+  );
+}
 
-
-
+function TaskEditor({
+  task,
+  project,
+  onSave,
+  onComment,
+}: {
+  task?: Task;
+  project: Project;
+  onSave: (t: Task) => void;
+  onComment: (text: string, kind: Activity["kind"]) => void;
+}) {
+  const [comment, setComment] = useState("");
+  const [kind, setKind] = useState<Activity["kind"]>("commented");
+  const [files, setFiles] = useState(task?.files || []);
+  const [fileError, setFileError] = useState("");
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const effort = Number(data.get("effort"));
+    const status = String(data.get("status")) as Status;
+    onSave({
+      id: task?.id || `CG-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+      title: String(data.get("title")).trim(),
+      description: String(data.get("description")),
+      owner: String(data.get("owner")),
+      effort,
+      remaining: status === "Done" ? 0 : Number(data.get("remaining")),
+      status,
+      priority: String(data.get("priority")) as Task["priority"],
+      due: String(data.get("due")),
+      dependencies: data.getAll("dependencies").map(String),
+      skill: String(data.get("skill")),
+      milestone: String(data.get("milestone")),
+      release: Number(data.get("release")),
+      blocker: String(data.get("blocker")).trim() || undefined,
+      comments: task?.comments || [],
+      files,
+    });
+  }
+  return (
+    <>
+      <div className="eyebrow">{task?.id || "MAKE THE NEXT STEP CLEAR"}</div>
+      <h2>{task ? "Task details" : "Create a task"}</h2>
+      <form onSubmit={submit}>
+        <label>
+          Task title
+          <input
+            name="title"
+            required
+            autoFocus
+            maxLength={120}
+            defaultValue={task?.title}
+            placeholder="What needs to get done?"
+          />
+        </label>
+        <label>
+          Description
+          <textarea
+            name="description"
+            defaultValue={task?.description}
+            placeholder="What does done look like?"
+            maxLength={3000}
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Owner
+            <select name="owner" defaultValue={task?.owner || "om"}>
+              {project.members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Status
+            <select name="status" defaultValue={task?.status || "To do"}>
+              {statuses.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Priority
+            <select name="priority" defaultValue={task?.priority || "Medium"}>
+              {["High", "Medium", "Low"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Due date
+            <input
+              name="due"
+              type="date"
+              required
+              defaultValue={task?.due || project.deadline}
+            />
+          </label>
+          <label>
+            Estimated effort (hours)
+            <input
+              name="effort"
+              type="number"
+              required
+              min="0.5"
+              max="500"
+              step="0.5"
+              defaultValue={task?.effort || 4}
+            />
+          </label>
+          <label>
+            Remaining effort (hours)
+            <input
+              name="remaining"
+              type="number"
+              required
+              min="0"
+              max="500"
+              step="0.5"
+              defaultValue={task?.remaining ?? 4}
+            />
+          </label>
+          <label>
+            Required skill
+            <select name="skill" defaultValue={task?.skill || "development"}>
+              {[
+                "development",
+                "backend",
+                "frontend",
+                "testing",
+                "database",
+              ].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Milestone
+            <select
+              name="milestone"
+              defaultValue={task?.milestone || "Working prototype"}
+            >
+              {["Foundation", "Working prototype", "Ready to ship"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label>
+          Depends on{" "}
+          <select
+            name="dependencies"
+            multiple
+            defaultValue={task?.dependencies || []}
+            className="dependencies-select"
+          >
+            {project.tasks
+              .filter((t) => t.id !== task?.id)
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.id}: {t.title}
+                </option>
+              ))}
+          </select>
+          <small>
+            Ctrl / Cmd + click to select or clear multiple prerequisites.
+          </small>
+        </label>
+        <div className="form-grid">
+          <label>
+            Blocker
+            <input
+              name="blocker"
+              defaultValue={task?.blocker}
+              placeholder="What is stopping this task?"
+              maxLength={240}
+            />
+          </label>
+          <label>
+            Earliest start (days from today)
+            <input
+              name="release"
+              type="number"
+              min="0"
+              max="365"
+              defaultValue={task?.release || 0}
+            />
+          </label>
+        </div>
+        <label className="file-label">
+          <Paperclip size={16} />
+          Attach evidence (up to 1 MB per file)
+          <input
+            type="file"
+            accept="image/*,.pdf,.txt,.csv,.md"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 1024 * 1024) {
+                setFileError("Choose a file smaller than 1 MB.");
+                return;
+              }
+              if (files.length >= 3) {
+                setFileError("Maximum 3 attachments per task.");
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () =>
+                setFiles((prev) => [
+                  ...prev,
+                  { name: file.name, url: String(reader.result) },
+                ]);
+              reader.readAsDataURL(file);
+              setFileError("");
+            }}
+          />
+        </label>
+        {fileError && <p className="amber-text">{fileError}</p>}
+        {files.map((f, i) => (
+          <div className="file-row" key={i}>
+            <a href={f.url} download={f.name}>
+              <Paperclip size={14} />
+              {f.name}
+            </a>
+            <button
+              type="button"
+              aria-label={`Remove ${f.name}`}
+              onClick={() => setFiles(files.filter((_, n) => n !== i))}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+        <button className="button primary full-width" type="submit">
+          {task ? "Save changes" : "Create task"} <Check size={17} />
+        </button>
+      </form>
+      {task && (
+        <div className="comments-section">
+          <h3>Conversation & evidence</h3>
+          {task.comments.map((c, i) => (
+            <div className="comment" key={i}>
+              <Avatar id={c.author} project={project} />
+              <div>
+                <strong>
+                  {
+                    project.members
+                      .find((m) => m.id === c.author)
+                      ?.name.split(" ")[0]
+                  }
+                </strong>
+                <p>{c.text}</p>
+              </div>
+            </div>
+          ))}
+          <textarea
+            aria-label="Comment or contribution evidence"
+            placeholder="Add context, a review, or evidence of your contribution…"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={2000}
+          />
+          <div className="comment-actions">
+            <select
+              aria-label="Evidence type"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as Activity["kind"])}
+            >
+              <option value="commented">Comment</option>
+              <option value="reviewed">Review evidence</option>
+              <option value="documented">Documentation evidence</option>
+              <option value="unblocked">Blocker resolution evidence</option>
+            </select>
+            <button
+              className="button secondary"
+              disabled={!comment.trim()}
+              onClick={() => {
+                onComment(comment, kind);
+                setComment("");
+              }}
+            >
+              Post <ArrowRight size={15} />
+            </button>
+          </div>
+          <p className="form-note">
+            Evidence is self-reported in this prototype. Only a server-backed
+            review workflow can enforce independent approval.
+          </p>
+        </div>
+      )}
+    </>
+  );
+}

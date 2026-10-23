@@ -8,3 +8,11 @@ __pycache__/
 .venv/
 .pytest_cache/
 artifacts/
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.agents/skills/
+.openai/
+*.log

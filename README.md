@@ -1,49 +1,144 @@
 # ContriGraph
 
-An algorithm-driven project management prototype for Team Xyphic’s TechTrix BONUS02 entry. Built from the presentation and the shared conversation’s decision to skip generative AI.
+Project planning for student teams where skills, dependencies, and shared capacity determine what can actually ship.
 
-## Run
+ContriGraph makes workload visible across projects and previews safe recovery decisions before a lead approves them. When only one teammate has a required skill, that specialist keeps the task while compatible side work can move.
 
-Requires Node 20.9+.
+![ContriGraph project overview](docs/screenshots/overview.png)
 
-```sh
+[Setup](#run-locally) · [Screenshot gallery](docs/SCREENSHOTS.md) · [Scheduling research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md)
+
+The original browser-only prototype is preserved in **`proto/`**. The main application is **`apps/web/` + `services/api/`**.
+
+## Run locally
+
+Prerequisites: Node.js 22+ and Python 3.13.
+
+```powershell
 npm install
+python -m venv services/api/.venv
+services/api/.venv/Scripts/python.exe -m pip install -r services/api/requirements.txt
+# On a fresh checkout only: copy services/api/.env.example to services/api/.env and fill the settings.
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. `npm test` runs the scheduling and analysis tests. `npm run build` creates a static production export in `out/`.
+Open **http://127.0.0.1:3000**. The web app proxies `/api` to FastAPI on port 8000. API documentation: http://127.0.0.1:8000/docs.
 
-## Working features
+Create your own ignored environment file from `.env.example`. Configure a Supabase URL and publishable key for email sign-in; set the Auth Site URL to the web origin. The optional sandbox creates an isolated sample workspace without creating a Supabase identity. With `DATABASE_URL` empty, the API uses local SQLite; supplying a Postgres connection requires the migration below.
 
-- Multiple projects with descriptions and deadlines, plus editable member availability.
-- Task creation/editing, priorities, owners, estimated/remaining hours, milestone assignment, deadlines, status, comments and local evidence attachments.
-- Kanban with drag and drop and explicit completion approval. Open prerequisites prevent completion.
-- React Flow dependency graph, new dependency connections, cycle prevention, manual blockers and release delays.
-- Deterministic resource-constrained greedy forecast, with owner availability and prerequisite finish constraints.
-- Weekly capacity analysis that separates ready work from blocked effort.
-- Skill/capacity-checked redistribution recommendations. What-If scenarios recalculate delivery and show task start/finish offsets before approval.
-- Contribution dimensions for accepted effort, reviews, documentation and blocker resolution. No ranking or automatic grade.
-- Explainable health rules, overdue alerts, project activity, in-app reports, JSON reports, contribution CSV and workspace backup.
-- Responsive custom UI, React Bits CountUp, GSAP navigation motion, Lenis scrolling, Vengeance UI CornerButton, and a custom WebGL shader. See `docs/DESIGN-SOURCES.md`.
+On macOS/Linux, activate the virtual environment with `source services/api/.venv/bin/activate`, then run `python -m pip install -r services/api/requirements.txt`. The npm launcher detects the platform automatically.
 
-## Demo scenario
+## What works
 
-The sample is a snapshot anchored to **23 October 2026**, with a deadline of 30 October. Om has 30h assigned, Moksh 18h, and Manish 6h, against 20h each. The scheduler forecasts 9.5 elapsed days (2 November, rounded up). Moving the independent 12h testing task from Om to qualified teammate Manish balances all three at 90% and recalculates delivery to 6.5 days (30 October). The simulator proves the date separately from the utilization improvement. Input estimates can change the result.
+- Account registration and sign-in through Supabase, with server-side HttpOnly sessions. Local Argon2 accounts are available only when Supabase settings are absent.
+- Project creation, membership invitations, lead/member/reviewer permissions, milestones, deadlines, priorities, task estimates, and remaining effort.
+- Task planning, prerequisite editing, cycle rejection, status transitions, reviewer acceptance, comments, evidence categories, file uploads/downloads, and append-only activity history.
+- Member skills, weekly capacity, working days, time-off overrides, and project holidays.
+- Deterministic half-hour resource scheduling, dependency propagation, overdue alerts, missing-skill and single-specialist detection, and conditional/unknown forecasts.
+- Recovery previews for qualified reassignment, priority, scope deferral, capacity, and deadline changes. Approval records a reason and the forecast change.
+- Contribution dimensions for accepted estimated effort, deliverables, independent reviews, documentation, and blocker evidence. No member ranking or invented productivity score.
+- Five-second background revision checks, optimistic edit conflict protection, and JSON performance-report export.
+- Across projects: seven-day workload for accessible projects, shared-account capacity counted once, daily overload warnings, unclaimed/unassigned work, calendar-conflict warnings, task drilldowns and JSON export. Updates every 15 seconds.
+- Progress updates: lead-authored health reports with immutable author/time, summary, next steps, a seven-day stale indicator, activity history and report export.
+- Work-in-progress limits: lead-configured advisory limits for In progress and In review, visible across filters and included in calculated health. Blank settings disable limits.
 
-## Honest prototype boundaries
+## The single-specialist case
 
-All application state and attachments are saved in browser localStorage. New visitors receive sample data. There is no authentication, server authorization, live collaboration, cloud upload, trusted audit trail or notification delivery. Comments and evidence are self-reported. “Approve” is a local workflow action, not a protected team-lead permission. Reports disclose this limitation.
+A task requiring skills possessed by only one teammate stays with that specialist. The engine looks for their compatible, unlocked, unstarted side work that another teammate can take. Each candidate gets a full calendar/dependency resimulation. If no safe reassignment exists, the recovery lab allows explicit sequencing, scope, or deadline decisions. Training and pairing do not magically create qualification or reduce estimates.
 
-The forecasting engine currently runs as pure TypeScript functions in `lib/engine.ts`, so the demo works without credentials or a Python service. FastAPI/NetworkX and Supabase from the proposal are the next integration phase, not dependencies pretending to be connected.
+No qualified member, an unresolved blocker without a date, or insufficient capacity makes the delivery forecast **unknown**. Deferral removes affected downstream scope; it is never counted as completed work.
 
-The greedy scheduler is valid but not guaranteed optimal. It reserves uninterrupted owner time for one task at a time, uses uniform daily availability (`weekly hours / 5`), and maps elapsed offsets to calendar dates without weekends or holidays. Manual blockers need an earliest-start estimate. Task delays, health thresholds and capacity are explainable calculations, not learned predictions. Workload compares all remaining project work to one week of capacity; multiple deadline windows are future work.
+The sample scenario moves 12h of testing from the scheduling specialist to a qualified interface teammate. On the 23 October 2026 sample calendar, delivery changes from 3 November to 30 October. Actual results follow the current planning date and entered calendars.
 
-## Next implementation phase
+## Supabase database activation
 
-1. Supabase Auth and project membership, normalized Postgres records, RLS policies, private Storage buckets and Realtime subscriptions.
-2. Server-generated audit events and independent reviewer approvals, enforced by database policies and protected functions.
-3. Move the six intelligence functions behind FastAPI with NetworkX DAG validation. Preserve the tested TypeScript examples as cross-language contract fixtures.
-4. Add calendars, time windows, partially consumed availability and task splitting to the scheduler.
-5. Backend email/in-app alert delivery, signed evidence URLs and trusted report exports.
+Postgres stores projects, sessions, files, and audit events in a private schema. The adapter uses a bounded connection pool. Local SQLite remains available for development. No database or credentials are included in this repository.
 
-No API keys or user contact details from the presentation are included in the source.
+1. Open your Supabase project’s **Connect** dialog and copy its Postgres **session pooler** connection string (appropriate when the local machine needs IPv4). Replace the password placeholder locally, URL-encoding special characters.
+2. Add `DATABASE_URL=postgresql://...?...` to **`services/api/.env`**, including `sslmode=require`. Keep that value out of chat and Git.
+3. Run the explicit migration and restart the application:
+
+```powershell
+services/api/.venv/Scripts/python.exe services/api/migrate.py
+npm run dev
+```
+
+The migration creates `contrigraph_private`, with RLS enabled and public schema/table privileges revoked. It does not expose application tables through the public Data API. FastAPI uses a server-only database connection and enforces memberships/roles. Use the same owner connection for this initial setup; a dedicated runtime DB role requires deliberate grants/policies before switching.
+
+The adapter uses bound parameters, atomic transactions, optimistic versions, and a transaction-level advisory lock for aggregate mutations. The app startup only checks the schema; it does not run migrations implicitly. Switching databases starts a separate data store and does **not** silently migrate existing SQLite records.
+
+Supabase's Auth Site URL should point to your deployed web origin so confirmation links return to the app. Existing Supabase settings are not changed automatically. The application does not need a Supabase data API secret key. Keep credentials in the server environment.
+
+References: [Supabase connection methods](https://supabase.com/docs/guides/database/connecting-to-postgres), [API key capabilities](https://supabase.com/docs/guides/getting-started/api-keys).
+
+## Verification
+
+```powershell
+npm test
+npm run build
+```
+
+The 88-test backend suite covers skill constraints, sole-specialist preservation, recovery impact, calendars, exact half-hour capacity, zero capacity, blocker propagation, cycles, deferral, locks, priority persistence, resource exclusivity, stale versions, roles, invites, sessions, attachments, evidence, and review independence. Supabase auth response contracts are tested with mocks; a live email-confirmation callback was subsequently verified in Chrome and established the user’s server session.
+
+Browser checks exercised sandbox sign-in, recovery preview/approval, persistent version changes, and task creation. The Supabase Auth settings endpoint was checked live. Cloud Postgres integration checks passed as described above. Public deployment has not been performed.
+
+## Deployment boundary and limitations
+
+This is a full Next.js + FastAPI application. Static Sites hosting cannot run its Python backend. Run both services behind one HTTPS origin; set the web `API_URL` at build time, `APP_ORIGINS` to the deployed origin, `COOKIE_SECURE=true`, and `ENABLE_SANDBOX=false`. Keep API secrets and the database connection server-side. If using SQLite, keep its data directory on a persistent volume and use one API instance. Postgres is the active shared storage option.
+
+The schedule is a feasible greedy forecast, not an optimal solver. Today is treated as a full planning day; override remaining availability where needed. Work can pause between calendar days. Review time is represented by remaining task effort. Skill declarations and documentation evidence are team-entered. The scheduler does not independently verify competence or work quality. Activity display/export currently includes the latest 1,000 events. Sessions expire after 24h; Supabase refresh tokens are not retained, and global Supabase logout does not revoke existing local sessions immediately. Sign out of this app to invalidate its session.
+
+For larger production deployment: add distributed auth rate limiting, operational monitoring/backups, paginated audit export, and load-test the configured Postgres provider. Current in-process auth throttling is intended for a single API instance.
+
+## Structure
+
+- `apps/web/app/page.tsx`: workspace orchestration and role-aware workflows.
+- `apps/web/components/`: reusable UI, auth, motion and shader components.
+- `services/api/main.py`: authenticated API and command authorization.
+- `services/api/engine.py`: calendar scheduling, skill coverage, and recovery simulation.
+- `services/api/store.py`: SQLite/Postgres persistence and optimistic concurrency.
+- `services/api/migrations/001_initial.sql`: private Postgres schema.
+- `services/api/test_platform.py`: regression suite.
+- `docs/RESEARCH.md`: source-based scheduling and contribution decisions.
+- `docs/DESIGN-SOURCES.md`: component sources and licensing.
+- `proto/`: preserved original prototype.
+
+React Bits, GSAP, Lenis, free Skiper UI, Vengeance UI and an original WebGL shader are integrated. Animmaster's paid source is not bundled without a licensed pack.
+
+## Follow-up audit
+
+See [platform audit](docs/PLATFORM-AUDIT.md) for the REA evidence, platform comparisons, workflow fixes, task filters and prioritized next work. The dev launcher now waits for API/database readiness before opening the web server.
+
+## Using the new planning workflows
+
+Open **Across projects** for the combined workload. A member must claim invitations using the same account to link their roster entries across projects. Matching names alone never merge identities. Only projects the viewer can access contribute data. Capacity is counted once; if those projects disagree on availability, the lowest daily value is used with a warning. The dashboard and redistribution previews use the same deterministic joint schedule and project timezone. Shared capacity is never double-booked. Project finish dates, task start/finish dates, and daily allocations come from that one calculation. Mixed timezones show unknown schedules until aligned. Due-effort and late-task warnings remain separate from feasible slot allocation. Private commitments remain unknown. Open each person's task details to identify work for a reviewed planning change.
+
+Open **Progress updates** to publish a health assessment, progress summary and next steps as a lead. Teammates can read the history. Updates are append-only, included in report exports, and stored with server-generated attribution and timestamps. At seven days the latest update is marked overdue. Reported health never overwrites the calculated risk indicators. Up to 500 updates are retained per project; reaching that bound rejects further additions rather than silently deleting history.
+
+On **Task board**, expand **Work-in-progress limits**. Set a positive limit for In progress and/or In review, or leave blank for no limit. A warning appears above the board when total column work exceeds a limit, even if a filter hides it. Limits are advisory: valid status changes still succeed. Only the lead can configure them. Settings and updates use project-version checks to reject stale writes.
+
+Existing project records receive empty defaults for updates and WIP limits on read. They use the existing private project document and atomic audit transaction, so no new database migration is required.
+
+The regression suite and production build run automatically through GitHub Actions. Browser verification uses isolated sandbox workspaces; see the audit for evidence and scope.
+
+## Safe redistribution across projects
+
+In **Across projects**, choose **Find safe redistributions**, open **Preview redistribution**, inspect the before/after project dates and protected specialist tasks, then enter a decision reason and approve. Canceling or viewing a preview never changes assignments. Reassignment stays within the task's existing project; it does not grant another project's members access or transfer the task's comments/files.
+
+The recovery scheduler jointly allocates half-hour slots for all accessible projects across a 180-day horizon. Linked identities share one slot pool. Conflicting calendars use their intersection; different project timezones block automatic recommendations. Every task must have a complete unconditional forecast. A move is offered only when no task finishes later and at least one finishes earlier. This deliberately conservative greedy simulation does not promise an optimal plan or on-time delivery.
+
+Only unlocked, unstarted tasks with remaining effort can move, and the recipient must already belong to that project and meet every required skill. Both people must have claimed profiles and all their platform project memberships must be visible to the approver. Unverified or hidden commitments block approval without exposing private project details. Outside-platform obligations remain unknown; declared calendars must include them.
+
+A sole specialist retains their specialist task. The search can transfer compatible side work to free their time. If that is impossible, it gives no forced reassignment; leads must review sequencing, scope, dates or additional qualified help. Skill training is not treated as instant qualification.
+
+Approval requires the source project's lead, a reason and a signed ten-minute preview. The token is bound to the actor, proposal, date, visible project data/versions, roles and commitment coverage. Approval rechecks the joint schedule inside the serialized write transaction. Stale, altered, expired or replayed approvals are rejected. The source audit record includes its forecast impact and an opaque context fingerprint, not unrelated project names or dates.
+
+Search checks at most 40 eligible pairs, displays up to eight suggestions, and is limited to 500 visible tasks. The UI reports when search is bounded; no suggestion does not establish that no feasible recovery exists. Set the same strong server-only `PREVIEW_SIGNING_KEY` on every API worker for multi-worker deployments. Without it, process-local keys invalidate outstanding previews on restart and cannot be shared across workers. No schema migration is needed.
+
+## Screenshots
+
+![Joint portfolio schedule](docs/screenshots/workload.png)
+
+![Safe redistribution preview](docs/screenshots/redistribution-preview.png)
+
+See the [complete screenshot gallery](docs/SCREENSHOTS.md) for the board, dependencies, skill coverage, contributions, progress updates, recovery lab, and mobile workflow. Screenshots use sample data; they are illustrative, not a hosted demo.

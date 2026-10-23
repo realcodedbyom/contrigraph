@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from 'next/link';
 import {
   ArrowRight,
   GitBranch,
   ShieldCheck,
   Flask,
 } from "@phosphor-icons/react";
-import { post } from "@/lib/api";
+import { api, post } from "@/lib/api";
 import { User } from "@/lib/types";
 import SignalShader from "./SignalShader";
 export default function AuthScreen({
@@ -22,6 +23,11 @@ export default function AuthScreen({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
+  const [googleUrl, setGoogleUrl] = useState('');
+  useEffect(() => {
+    setRegister(new URLSearchParams(window.location.search).get('signup') === '1');
+    api<{ googleUrl: string }>('/auth/providers').then(r => setGoogleUrl(r.googleUrl)).catch(() => {});
+  }, []);
   return (
     <div className="auth-shell">
       <section className="auth-story">
@@ -76,6 +82,7 @@ export default function AuthScreen({
       </section>
       <section className="auth-form-side">
         <div className="auth-form">
+          <div className="auth-public-links"><Link href="/">← Product home</Link><Link href="/help">Help & guides</Link></div>
           <div className="eyebrow">YOUR TEAM’S NEXT CHAPTER</div>
           <h2>{register ? "Start building together." : "Welcome back."}</h2>
           <p>
@@ -83,6 +90,7 @@ export default function AuthScreen({
               ? "Create your account and give your team a shared workspace."
               : "Sign in to pick up where your team left off."}
           </p>
+          {googleUrl && <><a className="google-signin" href={googleUrl}><span aria-hidden="true">G</span>Continue with Google</a><div className="auth-divider"><span>OR USE YOUR EMAIL</span></div></>}
           <form
             onSubmit={async (e) => {
               e.preventDefault();

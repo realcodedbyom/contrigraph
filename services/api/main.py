@@ -106,6 +106,24 @@ def me(user=Depends(current_user)):
     return user
 
 
+@app.get('/auth/providers')
+async def auth_providers():
+    if not cloud():
+        return {'googleUrl': ''}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            result = await client.get(os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/settings', headers={'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY']})
+        if result.status_code != 200 or not result.json().get('external', {}).get('google'):
+            return {'googleUrl': ''}
+    except (httpx.HTTPError, ValueError):
+        return {'googleUrl': ''}
+    from urllib.parse import urlencode
+    redirect_url = os.environ.get('AUTH_REDIRECT_URL', '').strip()
+    if not redirect_url:
+        return {'googleUrl': ''}
+    return {'googleUrl': os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/authorize?' + urlencode({'provider': 'google', 'redirect_to': redirect_url})}
+
+
 @app.post('/auth/register')
 async def register(body: Credentials, request: Request, response: Response):
     throttle(request)

@@ -12,4 +12,4 @@ The API's `GET /auth/providers` checks Supabase's public provider settings. It r
 
 Supabase sends the verified session back to the public homepage. ConfirmationBridge forwards its fragment to `/contrigraph/app/`, where the existing callback exchanges the verified identity for a server session. Neither tokens nor credentials are stored by the public product page.
 
-The current production Google provider is disabled. A successful provider configuration and an end-to-end sign-in test are required before claiming Google login is live.
+The production Google provider is enabled and the authorized redirect URI points to the Supabase callback. AUTH_MODE=google disables email/password login, signup, and resend in the production API. The public sign-in page offers Google only. The authorization redirect has been tested through Google’s account chooser; final consent and a complete sign-in remain user-controlled. The Google client is in testing mode, so only allowed test accounts can authenticate. OAuth client secrets are held only in the Supabase provider configuration, not the repository.

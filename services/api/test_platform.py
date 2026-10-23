@@ -343,3 +343,10 @@ def test_confirmation_quota_error_and_redirect_contract(client,monkeypatch):
     assert 'Confirmation email delivery' in result.json()['detail']
     assert captured['params'] == {'redirect_to':'https://dsvv.live/contrigraph/'}
     assert 'email_redirect_to' not in captured['json']
+
+@pytest.mark.parametrize('path,payload', [('/auth/login',{'email':'member@example.com','password':'test-password'}),('/auth/register',{'email':'member@example.com','password':'test-password','name':'Member'}),('/auth/resend',{'email':'member@example.com'})])
+def test_google_only_rejects_email_entry_points(client,monkeypatch,path,payload):
+    monkeypatch.setenv('AUTH_MODE','google')
+    result=client.post(path,json=payload)
+    assert result.status_code == 403
+    assert 'Google' in result.json()['detail']

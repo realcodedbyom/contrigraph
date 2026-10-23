@@ -1,8 +1,8 @@
 # Production audit and operational follow-up
 
-## Email delivery: provider setup required
+## Email delivery: provider setup required if email login is restored
 
-Supabase's built-in mail sender is not suitable for public signup. It has a project-wide quota and restrictions on recipients. Keep confirmation enabled and connect a transactional SMTP provider with a verified sender domain.
+Production currently uses Google-only sign-in with the Email provider disabled. The email provider instructions below apply only if email login is restored. Supabase's built-in mail sender is not suitable for public signup. It has a project-wide quota and restrictions on recipients. Keep confirmation enabled and connect a transactional SMTP provider with a verified sender domain.
 
 1. Choose a transactional mail provider and verify a sending domain such as `mail.dsvv.live` using that provider's exact DNS records.
 2. In Supabase Authentication → Email → SMTP Settings, configure the provider's host, port, username, SMTP password, sender address, and sender name.

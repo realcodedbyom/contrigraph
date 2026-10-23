@@ -126,7 +126,7 @@ export default function Home() {
     }
     if (confirmationError)
       setError(
-        "This verification link has expired or was already used. If you already confirmed your email, sign in. Otherwise request a new verification email below.",
+        "Sign-in was not completed or the link expired. Please try Continue with Google again.",
       );
     (accessToken
       ? post<User>("/auth/callback", { accessToken })

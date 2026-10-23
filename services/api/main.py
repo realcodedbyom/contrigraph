@@ -148,6 +148,8 @@ async def auth_providers():
 
 @app.post('/auth/register')
 async def register(body: Credentials, request: Request, response: Response):
+    if os.environ.get('AUTH_MODE') == 'google':
+        raise HTTPException(403, 'Use Continue with Google to create your account.')
     throttle(request)
     if not body.name.strip():
         raise HTTPException(422, 'Your name is required.')
@@ -175,6 +177,8 @@ async def register(body: Credentials, request: Request, response: Response):
 
 @app.post('/auth/login')
 async def login(body: Credentials, request: Request, response: Response):
+    if os.environ.get('AUTH_MODE') == 'google':
+        raise HTTPException(403, 'Use Continue with Google to sign in.')
     throttle(request)
     if cloud():
         result = await supabase_auth('token?grant_type=password', {'email': body.email, 'password': body.password})
@@ -199,6 +203,8 @@ class ResendVerification(BaseModel):
 
 @app.post('/auth/resend')
 async def resend_verification(body: ResendVerification, request: Request):
+    if os.environ.get('AUTH_MODE') == 'google':
+        raise HTTPException(403, 'Use Continue with Google. Email confirmation is not needed for Google sign-in.')
     throttle(request)
     if not cloud():
         raise HTTPException(400, 'Email verification is not enabled for local accounts.')

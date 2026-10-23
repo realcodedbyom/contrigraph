@@ -1,0 +1,23 @@
+# ContriGraph
+
+> ContriGraph is an intelligent project management platform for student software teams.
+
+## What it does
+
+- Plans projects with roles, milestones, tasks, priorities, deadlines, effort, skills, and dependencies.
+- Calculates planned workload from declared weekly availability and remaining task effort.
+- Schedules work in half-hour slots across working days, holidays, and per-day overrides.
+- Identifies blocked tasks, delivery risk, overloaded members, underused capacity, and single-specialist tasks.
+- Combines workload across accessible projects for linked team members.
+- Previews safe task redistribution before approval and protects members who are the only qualified person for a task.
+- Tracks progress updates, comments, attachments, reviews, approvals, and contribution evidence.
+
+## Public links
+
+- Product: https://dsvv.live/contrigraph/
+- Sitemap: https://dsvv.live/contrigraph/sitemap.xml
+- Source: https://github.com/realcodedbyom/contrigraph
+
+## Interpretation
+
+Workload is a forecast based on declared capacity and remaining effort. It is not automatic time tracking and does not rank people by task count.

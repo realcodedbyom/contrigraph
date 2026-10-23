@@ -19,7 +19,9 @@ export const metadata: Metadata = {
 };
 
 const structuredData = { "@context": "https://schema.org", "@graph": [
-  { "@type": "SoftwareApplication", name: "ContriGraph", applicationCategory: "ProjectManagement", operatingSystem: "Web", url: siteUrl, description: metadata.description, featureList: ["Skill-aware task assignment", "Dependency and blocker analysis", "Cross-project workload scheduling", "Contribution and progress reporting"] },
+  { "@type": "Organization", name: "ContriGraph", url: siteUrl, sameAs: ["https://github.com/realcodedbyom/contrigraph"] },
+  { "@type": "WebSite", name: "ContriGraph", url: siteUrl, inLanguage: "en", description: metadata.description },
+  { "@type": "SoftwareApplication", name: "ContriGraph", applicationCategory: "ProjectManagement", operatingSystem: "Web", url: siteUrl, description: metadata.description, featureList: ["Skill-aware task assignment", "Dependency and blocker analysis", "Cross-project workload scheduling", "Contribution and progress reporting"], publisher: { "@type": "Organization", name: "ContriGraph", url: siteUrl } },
   { "@type": "FAQPage", mainEntity: [
     { "@type": "Question", name: "How does ContriGraph calculate workload?", acceptedAnswer: { "@type": "Answer", text: "ContriGraph compares declared weekly availability with remaining task effort scheduled into working-day half-hour slots." } },
     { "@type": "Question", name: "Can ContriGraph handle a task only one person can do?", acceptedAnswer: { "@type": "Answer", text: "Yes. ContriGraph identifies single-specialist tasks and recommends schedule, scope, or deadline changes instead of unsafe reassignment." } },

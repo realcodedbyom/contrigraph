@@ -1,0 +1,26 @@
+# ContriGraph product reference
+
+ContriGraph helps student software teams make planning, workload, dependencies, and contribution visible in one workspace.
+
+## Planning model
+
+Each member declares weekly availability and working days. The scheduler distributes capacity into 30-minute slots, applies holidays and overrides, then places remaining task effort while respecting ownership, required skills, dependencies, blockers, priorities, and due dates.
+
+## Workload model
+
+The dashboard reports available capacity, remaining assigned effort, effort due in the next seven days, scheduled hours, blocked effort, and utilization. A member is overloaded when due effort exceeds near-term capacity or a scheduled task finishes late.
+
+## Safety and fairness
+
+Tasks requiring skills held by only one member are marked as single-specialist risks. The system does not force an unsafe reassignment. It recommends protecting that member's capacity and testing scope, sequencing, or deadline changes. Redistribution previews show dates and capacity before an authorized approval changes assignments.
+
+## Contribution model
+
+Contribution evidence includes accepted effort, progress updates, reviews, approvals, comments, task changes, and completion. The platform does not treat raw task counts as a complete performance score.
+
+## Limitations
+
+Forecasts depend on estimates, declared skills, availability, calendars, and self-reported progress. The platform does not measure private activity or claim to produce grades.
+
+Product: https://dsvv.live/contrigraph/
+Source: https://github.com/realcodedbyom/contrigraph

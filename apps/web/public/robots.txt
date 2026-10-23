@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /contrigraph/
+Allow: /contrigraph/llms.txt
+Allow: /contrigraph/llms-full.txt
 Disallow: /
 
 Sitemap: https://dsvv.live/contrigraph/sitemap.xml

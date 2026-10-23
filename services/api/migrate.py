@@ -13,6 +13,7 @@ if __name__ == '__main__':
     if database_kind() != 'postgres':
         raise SystemExit('Set DATABASE_URL in services/api/.env to a Supabase Postgres connection string first.')
     with connect() as db:
-        db.executescript((Path(__file__).parent / 'migrations/001_initial.sql').read_text())
+        for migration in sorted((Path(__file__).parent / 'migrations').glob('*.sql')):
+            db.executescript(migration.read_text())
     init_db()
     print('ContriGraph private schema is ready. Existing data was preserved.')

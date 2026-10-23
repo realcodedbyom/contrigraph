@@ -93,6 +93,7 @@ def init_db():
         db.executescript('''
         CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL, password_hash TEXT, provider TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS auth_identities(provider TEXT NOT NULL, subject TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), PRIMARY KEY(provider,subject));
         CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS memberships(project_id TEXT REFERENCES projects(id), member_id TEXT NOT NULL, user_id TEXT REFERENCES users(id), invite_hash TEXT, PRIMARY KEY(project_id,member_id));
         CREATE INDEX IF NOT EXISTS membership_user ON memberships(user_id);

@@ -7,20 +7,26 @@ export class ApiError extends Error {
 }
 const APP_BASE_PATH = process.env.NEXT_PUBLIC_APP_BASE_PATH || "";
 const appPath = (path: string) => `${APP_BASE_PATH}${path}`;
+let sessionToken: (() => Promise<string | null>) | null = null;
+export function setSessionToken(getter: (() => Promise<string | null>) | null) {
+  sessionToken = getter;
+}
 export async function api<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
   let response: Response;
+  const headers = new Headers(init?.headers);
+  if (!(init?.body instanceof FormData))
+    headers.set("Content-Type", "application/json");
+  const token = await sessionToken?.();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   try {
     response = await fetch(appPath("/api" + path), {
       credentials: "same-origin",
       cache: "no-store",
       ...init,
-      headers:
-        init?.body instanceof FormData
-          ? init.headers
-          : { "Content-Type": "application/json", ...init?.headers },
+      headers,
     });
   } catch {
     throw new ApiError(

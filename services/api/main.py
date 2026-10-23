@@ -71,6 +71,9 @@ async def invalid_value(request, error):
 
 
 def current_user(request: Request):
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        from clerk_identity import clerk_user
+        return clerk_user(request)
     token = request.cookies.get(COOKIE)
     if not token:
         raise HTTPException(401, 'Sign in to continue.')
@@ -120,7 +123,7 @@ async def supabase_auth(path, payload):
 def health_check():
     with connect() as db:
         db.execute('SELECT id FROM users LIMIT 0')
-    return {'status': 'ok', 'database': database_kind(), 'identity': 'supabase' if cloud() else 'local', 'sandbox': os.environ.get('ENABLE_SANDBOX') == 'true'}
+    return {'status': 'ok', 'database': database_kind(), 'identity': 'clerk' if os.environ.get('AUTH_MODE') == 'clerk' else ('supabase' if cloud() else 'local'), 'sandbox': os.environ.get('ENABLE_SANDBOX') == 'true'}
 
 
 @app.get('/auth/me')
@@ -130,6 +133,8 @@ def me(user=Depends(current_user)):
 
 @app.get('/auth/providers')
 async def auth_providers():
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        return {'provider': 'clerk', 'googleUrl': ''}
     if not cloud():
         return {'googleUrl': ''}
     try:
@@ -148,6 +153,8 @@ async def auth_providers():
 
 @app.post('/auth/register')
 async def register(body: Credentials, request: Request, response: Response):
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        raise HTTPException(403, 'Create your account using the sign-up form.')
     if os.environ.get('AUTH_MODE') == 'google':
         raise HTTPException(403, 'Use Continue with Google to create your account.')
     throttle(request)
@@ -177,6 +184,8 @@ async def register(body: Credentials, request: Request, response: Response):
 
 @app.post('/auth/login')
 async def login(body: Credentials, request: Request, response: Response):
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        raise HTTPException(403, 'Sign in using the sign-in form.')
     if os.environ.get('AUTH_MODE') == 'google':
         raise HTTPException(403, 'Use Continue with Google to sign in.')
     throttle(request)
@@ -203,6 +212,8 @@ class ResendVerification(BaseModel):
 
 @app.post('/auth/resend')
 async def resend_verification(body: ResendVerification, request: Request):
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        raise HTTPException(403, 'Request a new verification code from the sign-in form.')
     if os.environ.get('AUTH_MODE') == 'google':
         raise HTTPException(403, 'Use Continue with Google. Email confirmation is not needed for Google sign-in.')
     throttle(request)
@@ -245,6 +256,8 @@ async def verified_identity(token):
 
 @app.post('/auth/callback')
 async def auth_callback(body: AuthCallback, request: Request, response: Response):
+    if os.environ.get('AUTH_MODE') == 'clerk':
+        raise HTTPException(403, 'Use the current sign-in provider.')
     throttle(request)
     if not cloud():
         raise HTTPException(404)
@@ -260,7 +273,7 @@ async def auth_callback(body: AuthCallback, request: Request, response: Response
 
 @app.post('/auth/sandbox')
 def sandbox(request: Request, response: Response):
-    if os.environ.get('ENABLE_SANDBOX') != 'true':
+    if os.environ.get('ENABLE_SANDBOX') != 'true' or os.environ.get('AUTH_MODE') == 'clerk':
         raise HTTPException(404)
     throttle(request)
     uid = 'sandbox-' + secrets.token_hex(10)

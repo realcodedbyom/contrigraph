@@ -18,19 +18,19 @@ Prerequisites: Node.js 22+ and Python 3.13.
 npm install
 python -m venv services/api/.venv
 services/api/.venv/Scripts/python.exe -m pip install -r services/api/requirements.txt
-# On a fresh checkout only: copy services/api/.env.example to services/api/.env and fill the settings.
+# Copy services/api/.env.example and apps/web/.env.example to their ignored local env files, then fill the settings.
 npm run dev
 ```
 
 Open **http://127.0.0.1:3000**. The web app proxies `/api` to FastAPI on port 8000. API documentation: http://127.0.0.1:8000/docs.
 
-Create your own ignored environment file from `.env.example`. Configure a Supabase URL and publishable key for email sign-in; set the Auth Site URL to the web origin. The optional sandbox creates an isolated sample workspace without creating a Supabase identity. With `DATABASE_URL` empty, the API uses local SQLite; supplying a Postgres connection requires the migration below.
+Create your own ignored environment file from `.env.example`. Configure Clerk using [the account setup guide](docs/google-login.md). Set the public key in `apps/web/.env.local` and the secret key and issuer in the API environment. Google and email authentication are managed by Clerk. Clerk mode disables the legacy sandbox login. Automated tests use isolated local accounts and sample workspaces. With `DATABASE_URL` empty, the API uses local SQLite; supplying a Postgres connection requires the migration below.
 
 On macOS/Linux, activate the virtual environment with `source services/api/.venv/bin/activate`, then run `python -m pip install -r services/api/requirements.txt`. The npm launcher detects the platform automatically.
 
 ## What works
 
-- Account registration and sign-in through Supabase, with server-side HttpOnly sessions. Local Argon2 accounts are available only when Supabase settings are absent.
+- Google and verified email registration/sign-in through Clerk. FastAPI verifies session signatures, issuer, expiry, and allowed origin before authorizing project access. Legacy local accounts remain available for isolated development tests only.
 - Project creation, membership invitations, lead/member/reviewer permissions, milestones, deadlines, priorities, task estimates, and remaining effort.
 - Task planning, prerequisite editing, cycle rejection, status transitions, reviewer acceptance, comments, evidence categories, file uploads/downloads, and append-only activity history.
 - Member skills, weekly capacity, working days, time-off overrides, and project holidays.
@@ -67,7 +67,7 @@ The migration creates `contrigraph_private`, with RLS enabled and public schema/
 
 The adapter uses bound parameters, atomic transactions, optimistic versions, and a transaction-level advisory lock for aggregate mutations. The app startup only checks the schema; it does not run migrations implicitly. Switching databases starts a separate data store and does **not** silently migrate existing SQLite records.
 
-Supabase's Auth Site URL should point to your deployed web origin so confirmation links return to the app. Existing Supabase settings are not changed automatically. The application does not need a Supabase data API secret key. Keep credentials in the server environment.
+Supabase provides the PostgreSQL database; Clerk provides authentication. The application does not need a Supabase data API secret key. Keep database credentials and the Clerk secret key in the server environment.
 
 References: [Supabase connection methods](https://supabase.com/docs/guides/database/connecting-to-postgres), [API key capabilities](https://supabase.com/docs/guides/getting-started/api-keys).
 
@@ -78,15 +78,15 @@ npm test
 npm run build
 ```
 
-The 88-test backend suite covers skill constraints, sole-specialist preservation, recovery impact, calendars, exact half-hour capacity, zero capacity, blocker propagation, cycles, deferral, locks, priority persistence, resource exclusivity, stale versions, roles, invites, sessions, attachments, evidence, and review independence. Supabase auth response contracts are tested with mocks; a live email-confirmation callback was subsequently verified in Chrome and established the user’s server session.
+The 109-test backend suite covers scheduling, approvals, roles, invitations, attachments, and Clerk authentication. Clerk checks exercise real RSA signatures, expiry, issuer and origin validation, verified primary email, stable account mapping, rejection of old sessions, and project isolation. Tests use isolated databases and mocked external identity responses.
 
-Browser checks exercised sandbox sign-in, recovery preview/approval, persistent version changes, and task creation. The Supabase Auth settings endpoint was checked live. Cloud Postgres integration checks passed as described above. Public deployment has not been performed.
+Browser checks verified the live Clerk Google/email login and signup screens. Google OAuth reached the account chooser. Ten public route checks passed, including caching, security headers, canonical TLS redirects, metadata, and body limits. A personal-account login and email delivery still require the account owner’s end-to-end check. The current supplied keys are Clerk development keys; production instance/domain setup remains before a production launch.
 
 ## Deployment boundary and limitations
 
 This is a full Next.js + FastAPI application. Static Sites hosting cannot run its Python backend. Run both services behind one HTTPS origin; set the web `API_URL` at build time, `APP_ORIGINS` to the deployed origin, `COOKIE_SECURE=true`, and `ENABLE_SANDBOX=false`. Keep API secrets and the database connection server-side. If using SQLite, keep its data directory on a persistent volume and use one API instance. Postgres is the active shared storage option.
 
-The schedule is a feasible greedy forecast, not an optimal solver. Today is treated as a full planning day; override remaining availability where needed. Work can pause between calendar days. Review time is represented by remaining task effort. Skill declarations and documentation evidence are team-entered. The scheduler does not independently verify competence or work quality. Activity display/export currently includes the latest 1,000 events. Sessions expire after 24h; Supabase refresh tokens are not retained, and global Supabase logout does not revoke existing local sessions immediately. Sign out of this app to invalidate its session.
+The schedule is a feasible greedy forecast, not an optimal solver. Today is treated as a full planning day; override remaining availability where needed. Work can pause between calendar days. Review time is represented by remaining task effort. Skill declarations and documentation evidence are team-entered. The scheduler does not independently verify competence or work quality. Activity display/export currently includes the latest 1,000 events. Clerk session JWTs are checked locally; revocation takes effect once the short-lived token expires. Sign out using the app on shared computers.
 
 For larger production deployment: add distributed auth rate limiting, operational monitoring/backups, paginated audit export, and load-test the configured Postgres provider. Current in-process auth throttling is intended for a single API instance.
 

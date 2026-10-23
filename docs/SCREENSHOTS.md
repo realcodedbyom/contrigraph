@@ -10,9 +10,9 @@ Milestone progress, remaining effort, skill risks, and a reviewed recovery path.
 
 ## Sign in
 
-Email authentication and a separate sample workspace entry point.
+Google and verified email authentication through Clerk. Captured on the live site using the current development instance.
 
-![Sign in](screenshots/sign-in.png)
+![Sign in](screenshots/clerk-login.png)
 
 ## Task board
 

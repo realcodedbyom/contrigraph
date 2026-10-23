@@ -3937,7 +3937,7 @@ summary {
   color: #78816f;
   font-size: 13px;
 }
-.auth-form form {
+.auth-form form:not(.cl-form) {
   display: grid;
   gap: 20px;
   margin-top: 30px;

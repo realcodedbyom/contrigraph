@@ -1,15 +1,21 @@
-# Google sign-in
+# Account sign-in
 
-The API's `GET /auth/providers` checks Supabase's public provider settings. It returns a Google authorize URL only when the Google provider is enabled and `AUTH_REDIRECT_URL` is configured. The login screen then displays Continue with Google.
+ContriGraph uses Clerk for Google and email sign-in. Supabase PostgreSQL stores application data; Supabase Auth is no longer used in Clerk mode.
 
-## Provider configuration
+The workspace mounts the React SDK only on `/app/`. The branded login screen contains Clerk sign-in and sign-up components, including verification and recovery. Callback URLs include `NEXT_PUBLIC_APP_BASE_PATH`. Email methods and Google must be enabled in the existing Clerk instance.
 
-1. In Google Cloud, configure the OAuth consent screen for the application and create a Web application OAuth client.
-2. Add `https://ycdfvwtrcpyzvexlfkwk.supabase.co/auth/v1/callback` as an authorized redirect URI.
-3. Enter the client ID and secret in Supabase Authentication → Sign In / Providers → Google and enable it. Keep the secret in the provider settings, never in frontend source.
-4. Keep `https://dsvv.live/contrigraph/` in Supabase's allowed redirect URLs and set `AUTH_REDIRECT_URL` to that address on the API.
-5. Test Continue with Google using a permitted test account if the consent screen is in testing mode. Complete Google's publishing requirements before offering it to all users.
+The API verifies short-lived RS256 Clerk session JWTs using its configured issuer and JWKS. It requires expiry, issued time, subject, session ID, and an authorized party matching APP_ORIGINS. Pending sessions are rejected. First access retrieves a verified primary email from Clerk and creates a stable internal account bound to the Clerk subject. It never merges an older account by matching email. Existing project membership checks still apply to every request.
 
-Supabase sends the verified session back to the public homepage. ConfirmationBridge forwards its fragment to `/contrigraph/app/`, where the existing callback exchanges the verified identity for a server session. Neither tokens nor credentials are stored by the public product page.
+## Configuration
 
-The production Google provider is enabled and the authorized redirect URI points to the Supabase callback. AUTH_MODE=google disables email/password login, signup, and resend in the production API. The public sign-in page offers Google only. The authorization redirect has been tested through Google�s account chooser; final consent and a complete sign-in remain user-controlled. The Google client is in testing mode, so only allowed test accounts can authenticate. OAuth client secrets are held only in the Supabase provider configuration, not the repository.
+- Web ignored `.env.local`: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`; build-time `NEXT_PUBLIC_APP_BASE_PATH=/contrigraph` on the VPS.
+- API ignored `.env`: `AUTH_MODE=clerk`, `CLERK_ISSUER`, `CLERK_SECRET_KEY`, `APP_ORIGINS`, existing `DATABASE_URL`.
+- Run `python migrate.py` before starting the API to add the private identity mapping table.
+- Install Python requirements and web dependencies, build, then restart both services.
+- Keep the Clerk frontend API hostname in the nginx CSP. Include Clerk image hosts and challenge/protection hosts per the official CSP documentation. Update the hostname when switching to production keys.
+
+Clerk development keys are suitable for integration testing. A public production rollout needs the existing application’s production instance, domain/DNS setup, live keys, and production Google connection. Never place secret keys in frontend code, public files, or Git. Rotation should follow any credential exposure.
+
+The legacy API password and Supabase callback routes are disabled in Clerk mode. The server logout route clears old application cookies; the UI also signs out of Clerk. JWT verification is local, so a revoked token can remain valid until its short expiry. File downloads can use the same-origin Clerk session cookie.
+
+References: [Clerk React SDK](https://clerk.com/docs/reference/react/overview), [Clerk CSP](https://clerk.com/docs/guides/secure/best-practices/csp-headers), [production setup](https://clerk.com/docs/guides/development/deployment/production).

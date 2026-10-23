@@ -66,7 +66,7 @@ const statuses = [
   "Deferred",
 ] as const;
 const uid = () => crypto.randomUUID();
-export default function Home() {
+export default function Home({ onSignOut }: { onSignOut?: () => Promise<void> }) {
   const authStarted = useRef(false);
   const [user, setUser] = useState<User | null>(null),
     [ready, setReady] = useState(false),
@@ -115,7 +115,7 @@ export default function Home() {
       .then((r) => setSandbox(r.sandbox))
       .catch(() => {});
     const confirmation = new URLSearchParams(window.location.hash.slice(1));
-    const accessToken = confirmation.get("access_token");
+    const accessToken = onSignOut ? null : confirmation.get("access_token");
     const confirmationError = confirmation.get("error_description");
     if (accessToken || confirmationError) {
       window.history.replaceState(
@@ -236,6 +236,7 @@ export default function Home() {
     setSection("Recovery lab");
   };
   if (!ready) return <div className="cg-loading">Opening your workspace…</div>;
+  if (!user && onSignOut) return <div className="cg-loading"><div role="alert"><h2>We couldn’t open your workspace.</h2><p>{error || 'Your session could not be verified. Please sign in again.'}</p><button className="cg-btn" onClick={() => window.location.reload()}>Try again</button><button className="cg-text" onClick={onSignOut}>Sign out</button></div></div>;
   if (!user)
     return (
       <>
@@ -317,6 +318,7 @@ export default function Home() {
               onClick={() =>
                 run(async () => {
                   await post("/auth/logout", {});
+                  await onSignOut?.();
                   setP(null);
                   setUser(null);
                 })

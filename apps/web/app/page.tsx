@@ -7,6 +7,7 @@ import ProductExperience, {
 } from "@/components/ProductExperience";
 import SkiperLink from "@/components/SkiperLink";
 import ProductWorkflow from "@/components/ProductWorkflow";
+import ProductTour from "@/components/ProductTour";
 export default function ProductPage() {
   return (
     <div className="public-site">
@@ -29,8 +30,8 @@ export default function ProductPage() {
               <Link className="public-button" href="/app?signup=1">
                 Start your team workspace <PublicArrow />
               </Link>
-              <a href="#walkthrough">
-                Walk through a workday <PublicArrow direction="right" />
+              <a href="#watch">
+                Watch the product tour <PublicArrow direction="right" />
               </a>
             </div>
             <p className="public-note">
@@ -40,6 +41,7 @@ export default function ProductPage() {
           </div>
           <ProductExperience />
         </section>
+        <ProductTour />
         <ProductWorkflow />
         <section id="product" className="public-section">
           <p className="public-kicker">FROM ASSIGNMENT TO DELIVERY</p>

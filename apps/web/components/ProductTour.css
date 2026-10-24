@@ -1,0 +1,228 @@
+.product-tour {
+  scroll-margin-top: 28px;
+}
+.tour-heading {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 56px;
+  align-items: end;
+  margin-bottom: 32px;
+}
+.tour-heading h2 {
+  margin-bottom: 0;
+}
+.tour-heading > p {
+  color: #526048;
+  font-size: 16px;
+  line-height: 1.85;
+  margin: 0 0 4px;
+}
+.tour-player {
+  position: relative;
+  background: #263522;
+  border: 1px solid #c3cdb8;
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 12px 0 #e3e8da;
+}
+.tour-player video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.tour-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border: 2px solid #f7f8f2;
+  border-radius: 10px;
+  background: #263522;
+  color: #fff;
+  padding: 22px 28px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px #0003;
+}
+.tour-play:hover {
+  background: #3b5131;
+}
+.tour-play span {
+  font-size: 17px;
+  font-weight: 750;
+}
+.tour-play small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: #d7e1cc;
+  margin-top: 5px;
+}
+.tour-play:focus-visible,
+.tour-chapters button:focus-visible,
+.tour-transcript summary:focus-visible,
+.tour-credits summary:focus-visible {
+  outline: 3px solid #ad4d2c;
+  outline-offset: 5px;
+}
+.tour-caption {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-top: 28px;
+  font-size: 12px;
+  color: #526048;
+}
+.tour-caption p {
+  margin: 0;
+}
+.tour-caption a {
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.tour-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 26px 0;
+}
+.tour-chapters button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #cbd4c0;
+  border-radius: 6px;
+  background: #edf0e6;
+  color: #273323;
+  cursor: pointer;
+  padding: 12px 14px;
+  text-align: left;
+  font:
+    600 12px/1.4 Manrope,
+    Arial,
+    sans-serif;
+}
+.tour-chapters button:hover {
+  background: #dfe7d5;
+  border-color: #9caf89;
+}
+.tour-chapters span {
+  color: #854025;
+  font-variant-numeric: tabular-nums;
+}
+.tour-transcript {
+  border-top: 1px solid #ccd5c1;
+  border-bottom: 1px solid #ccd5c1;
+  padding: 20px 0;
+}
+.tour-transcript summary,
+.tour-credits summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 14px;
+}
+.tour-transcript > div {
+  max-width: 780px;
+  padding-top: 15px;
+}
+.tour-transcript article {
+  margin: 25px 0;
+}
+.tour-transcript h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.tour-transcript article p {
+  font-size: 15px;
+  color: #526048;
+  line-height: 1.9;
+  margin: 0;
+}
+.tour-next {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px 24px;
+  margin: 28px 0;
+  font-size: 13px;
+}
+.tour-next p {
+  margin: 0;
+  font-weight: 700;
+}
+.tour-next > a:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-credits {
+  color: #5c6952;
+  max-width: 780px;
+}
+.tour-credits summary {
+  font-size: 11px;
+  font-weight: 500;
+}
+.tour-credits p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.public-site .tour-credits a {
+  text-decoration: underline;
+}
+.tour-error {
+  background: #f5e4da;
+  color: #713920;
+  padding: 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media (max-width: 800px) {
+  .tour-heading {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}
+@media (max-width: 520px) {
+  .tour-play {
+    gap: 10px;
+    padding: 14px 17px;
+  }
+  .tour-play span {
+    font-size: 13px;
+  }
+  .tour-play small {
+    font-size: 10px;
+  }
+  .tour-play svg {
+    width: 20px;
+    height: 20px;
+  }
+  .tour-player {
+    border-radius: 8px;
+  }
+  .tour-chapters {
+    gap: 8px;
+  }
+  .tour-chapters button {
+    flex: 1 1 150px;
+    font-size: 11px;
+    padding: 12px 10px;
+  }
+  .tour-heading > p {
+    font-size: 14px;
+  }
+}

@@ -49,7 +49,26 @@ assert.match(homepage.headers.get("cache-control"), /no-cache/);
 assert.equal(homepage.headers.get("x-powered-by"), null);
 assert.match(html, /Know what/);
 assert.match(html, /id="walkthrough"/);
-assert.match(html, /Explore the team workflow/);
+assert.match(html, /Watch the product tour/);
+assert.match(html, /id="watch"/);
+assert.match(html, /preload="none"/);
+assert.match(html, /Read the full video transcript/);
+const tourMedia = `${origin}/contrigraph/media/contrigraph-product-tour-en-v1`;
+const videoRange = await fetch(`${tourMedia}.mp4`, {
+  headers: { Range: "bytes=0-1023" },
+  signal: AbortSignal.timeout(20000),
+});
+assert.equal(videoRange.status, 206, "Video supports seeking with byte ranges");
+assert.match(videoRange.headers.get("content-type"), /video\/mp4/);
+assert.match(videoRange.headers.get("content-range"), /^bytes 0-1023\//);
+assert.equal((await videoRange.arrayBuffer()).byteLength, 1024);
+const captions = await fetch(`${tourMedia}.vtt`);
+assert.equal(captions.status, 200);
+assert.match(captions.headers.get("content-type"), /text\/vtt/);
+assert.match(await captions.text(), /^WEBVTT/);
+const poster = await fetch(`${tourMedia}.jpg`);
+assert.equal(poster.status, 200);
+assert.match(poster.headers.get("content-type"), /image\/jpeg/);
 assert.match(html, /application\/ld\+json/);
 assert.match(html, /og:title/);
 assert.match(html, /rel="canonical"/);

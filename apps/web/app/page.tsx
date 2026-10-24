@@ -1,3 +1,4 @@
+import PublicArrow from "@/components/PublicArrow";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 import ProductExperience, {
@@ -26,9 +27,11 @@ export default function ProductPage() {
             </p>
             <div className="public-hero-actions">
               <Link className="public-button" href="/app?signup=1">
-                Start your team workspace ↗
+                Start your team workspace <PublicArrow />
               </Link>
-              <a href="#walkthrough">Walk through a workday →</a>
+              <a href="#walkthrough">
+                Walk through a workday <PublicArrow direction="right" />
+              </a>
             </div>
             <p className="public-note">
               Skill-aware planning. Explainable forecasts. Decisions stay with
@@ -47,10 +50,13 @@ export default function ProductPage() {
               <h3>Make the next step clear.</h3>
               <p>
                 Assign owners, define milestones, and connect dependencies. See
-                blocked work before it becomes a missed deadline. Personal inboxes
-                bring assignments, requests and replies back to the work.
+                blocked work before it becomes a missed deadline. Personal
+                inboxes bring assignments, requests and replies back to the
+                work.
               </p>
-              <Link href="/help#getting-started">Build your first plan →</Link>
+              <Link href="/help#getting-started">
+                Build your first plan <PublicArrow direction="right" />
+              </Link>
             </article>
             <article>
               <span>02 / BALANCE</span>
@@ -60,7 +66,9 @@ export default function ProductPage() {
                 redistribution against the same schedule shown in your
                 dashboard.
               </p>
-              <Link href="/help#workload">Understand capacity →</Link>
+              <Link href="/help#workload">
+                Understand capacity <PublicArrow direction="right" />
+              </Link>
             </article>
             <article>
               <span>03 / RECOGNIZE</span>
@@ -70,7 +78,7 @@ export default function ProductPage() {
                 visible alongside delivery.
               </p>
               <Link href="/help#contributions">
-                Explore contribution evidence →
+                Explore contribution evidence <PublicArrow direction="right" />
               </Link>
             </article>
             <article>
@@ -80,7 +88,9 @@ export default function ProductPage() {
                 Preview changes to scope, deadlines, and ownership. Review their
                 effect before approving a new plan.
               </p>
-              <Link href="/help#specialists">Handle a single specialist →</Link>
+              <Link href="/help#specialists">
+                Handle a single specialist <PublicArrow direction="right" />
+              </Link>
             </article>
           </div>
         </section>
@@ -97,7 +107,9 @@ export default function ProductPage() {
             declared availability. It does not measure time spent at a keyboard
             or automatically grade people.
           </p>
-          <Link href="/help#workload">Read the workload guide →</Link>
+          <Link href="/help#workload">
+            Read the workload guide <PublicArrow direction="right" />
+          </Link>
         </section>
         <section className="public-section public-faq">
           <p className="public-kicker">QUESTIONS, ANSWERED</p>
@@ -129,7 +141,9 @@ export default function ProductPage() {
               inaccessible projects are unknown.
             </p>
           </details>
-          <Link href="/faq">Read all FAQs →</Link>
+          <Link href="/faq">
+            Read all FAQs <PublicArrow direction="right" />
+          </Link>
         </section>
         <section className="public-cta">
           <h2>
@@ -137,7 +151,7 @@ export default function ProductPage() {
             <br />a clearer start.
           </h2>
           <Link href="/app?signup=1" className="public-button">
-            Get started ↗
+            Get started <PublicArrow />
           </Link>
         </section>
       </main>

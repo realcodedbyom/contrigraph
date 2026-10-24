@@ -1,3 +1,4 @@
+import PublicArrow from "@/components/PublicArrow";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
@@ -19,7 +20,8 @@ const questions = [
   {
     id: "notifications",
     question: "How will I know when someone assigns work or replies?",
-    answer: "Your Inbox shows task assignments and lead replies. Leads receive requests for help and blocker reports; leads and reviewers receive review submissions. Notifications persist across visits and refresh every 15 seconds while the workspace is active. Open one to reach the task or exact request, or mark it read or unread. These are in-app notifications, not email or device push. You need a claimed team profile; your own actions do not notify you.",
+    answer:
+      "Your Inbox shows task assignments and lead replies. Leads receive requests for help and blocker reports; leads and reviewers receive review submissions. Notifications persist across visits and refresh every 15 seconds while the workspace is active. Open one to reach the task or exact request, or mark it read or unread. These are in-app notifications, not email or device push. You need a claimed team profile; your own actions do not notify you.",
   },
   {
     id: "my-work",
@@ -107,7 +109,9 @@ export default function FAQPage() {
           {questions.map((q) => (
             <a key={q.id} href={`#${q.id}`}>
               {q.question}
-              <span aria-hidden="true">↗</span>
+              <span aria-hidden="true">
+                <PublicArrow />
+              </span>
             </a>
           ))}
         </nav>
@@ -118,11 +122,13 @@ export default function FAQPage() {
               <p>{q.answer}</p>
               {q.id === "accounts" && (
                 <Link className="public-button" href="/login">
-                  Log in to ContriGraph ↗
+                  Log in to ContriGraph <PublicArrow />
                 </Link>
               )}
               {q.id === "hours" && (
-                <Link href="/help#workload">Read the workload guide →</Link>
+                <Link href="/help#workload">
+                  Read the workload guide <PublicArrow direction="right" />
+                </Link>
               )}
             </article>
           ))}
@@ -130,7 +136,7 @@ export default function FAQPage() {
         <section className="public-cta">
           <h2>Ready to make a shared plan?</h2>
           <Link className="public-button" href="/app?signup=1">
-            Create your account ↗
+            Create your account <PublicArrow />
           </Link>
         </section>
       </main>

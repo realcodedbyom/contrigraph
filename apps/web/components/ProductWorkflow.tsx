@@ -1,4 +1,5 @@
 "use client";
+import PublicArrow from "@/components/PublicArrow";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Link from "next/link";
@@ -129,7 +130,9 @@ export default function ProductWorkflow() {
             >
               <span>0{i + 1}</span>
               <strong>{s.label}</strong>
-              <span aria-hidden="true">↗</span>
+              <span aria-hidden="true">
+                <PublicArrow />
+              </span>
             </button>
           ))}
         </div>
@@ -167,7 +170,9 @@ export default function ProductWorkflow() {
             <p>{step.result}</p>
             <button onClick={() => setIndex((index + 1) % steps.length)}>
               {index === 3 ? "Replay the workflow" : "See the next step"}{" "}
-              <span aria-hidden="true">→</span>
+              <span aria-hidden="true">
+                <PublicArrow direction="right" />
+              </span>
             </button>
           </div>
         </div>
@@ -178,7 +183,7 @@ export default function ProductWorkflow() {
           <p>{step.copy}</p>
         </div>
         <Link href="/app?signup=1" className="public-button">
-          Try it with your team ↗
+          Try it with your team <PublicArrow />
         </Link>
       </div>
       <p className="workflow-boundary">

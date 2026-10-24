@@ -4389,3 +4389,6 @@ html.lenis body {
   .cg-report .cg-report-header h1{font-size:24pt}.cg-report h2{font-size:15pt;break-after:avoid}.cg-report h3{break-after:avoid}.cg-report section,.cg-report footer{margin-top:18pt}.cg-report .cg-report-table{overflow:visible!important}.cg-report table{min-width:0!important;width:100%!important;font-size:8.5pt;table-layout:fixed}.cg-report th,.cg-report td{padding:6pt 4pt}.cg-report thead{display:table-header-group}.cg-report tr,.cg-report .cg-report-record,.cg-report .cg-report-summary{break-inside:avoid}.cg-report .cg-report-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.cg-report .cg-report-summary dd{font-size:13pt}.cg-report .cg-report-note,.cg-report small,.cg-report dt{font-size:8.5pt}.cg-report .cg-report-header dl{grid-template-columns:repeat(2,minmax(0,1fr))}a[href]:after{content:none!important}
 }
 .cg-report th{text-transform:none;letter-spacing:normal}.cg-report-tools .cg-primary{background:#304329;color:#fff}
+
+/* Vector arrows keep public links consistent across system emoji fonts. */
+.public-arrow{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.15em;flex-shrink:0}.public-button>.public-arrow{width:18px;height:18px}.guide-index .public-arrow{color:#ad4d2c}

@@ -1,4 +1,5 @@
 'use client';
+import PublicArrow from "@/components/PublicArrow";
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import gsap from 'gsap';
@@ -34,10 +35,10 @@ export default function ProductExperience() {
     <div ref={panel} id="experience-panel" role="tabpanel" aria-labelledby={'tab-'+view} className="experience-panel">
       <div className="experience-heading"><div><p>THE WEEK AHEAD</p><h2>{moved ? 'A little breathing room.' : 'A clear view of the load.'}</h2></div><span className="experience-week">MON—FRI</span></div>
       <div className="capacity-table"><div className="capacity-labels"><span>Member / expertise</span><span>Planned / available</span></div>{[{name:'Alex',skill:'Backend specialist',hours:moved?12:20,capacity:16},{name:'Sam',skill:'Interface & testing',hours:moved?14:6,capacity:16},{name:'Jo',skill:'Research & documentation',hours:10,capacity:12}].map(p=><div className="capacity-person" key={p.name}><div className="capacity-person-info"><span className="capacity-avatar">{p.name[0]}</span><div><strong>{p.name}</strong><small>{p.skill}</small></div><span className={p.hours>p.capacity?'capacity-warning':''}>{p.hours}h / {p.capacity}h</span></div><div className="capacity-track" aria-label={`${p.name}: ${p.hours} hours planned against ${p.capacity} available`}><span style={{width:Math.min(p.hours/p.capacity*100,100)+'%',background:p.hours>p.capacity?'#cb5934':'#738966'}}/></div></div>)}</div>
-      <div className="experience-decision"><span className="decision-index">↳</span><div><strong>{moved ? 'Testing moves. Backend ownership stays.' : 'One specialist. Two ways to protect their time.'}</strong><p>{moved ? 'In this example, moving 8h of testing to Sam brings both members within capacity. The specialist keeps the API task.' : 'Alex is the only backend specialist. Keep the API with Alex and preview moving testing to a qualified teammate.'}</p></div></div>
-      {view==='Recovery' ? <div className="experience-recovery"><CornerButton accentColor="#d9653d" showIcon={false} onClick={()=>setPreview(!preview)}>{preview ? 'Reset example' : 'Preview redistribution'}</CornerButton><span role="status">{preview ? 'Example only. No project data changed.' : 'No changes until a real preview is approved.'}</span></div> : <button className="experience-switch" onClick={()=>setView('Recovery')}>What could we change? <span>Explore recovery →</span></button>}
+      <div className="experience-decision"><span className="decision-index"><PublicArrow direction="turn-right" /></span><div><strong>{moved ? 'Testing moves. Backend ownership stays.' : 'One specialist. Two ways to protect their time.'}</strong><p>{moved ? 'In this example, moving 8h of testing to Sam brings both members within capacity. The specialist keeps the API task.' : 'Alex is the only backend specialist. Keep the API with Alex and preview moving testing to a qualified teammate.'}</p></div></div>
+      {view==='Recovery' ? <div className="experience-recovery"><CornerButton accentColor="#d9653d" showIcon={false} onClick={()=>setPreview(!preview)}>{preview ? 'Reset example' : 'Preview redistribution'}</CornerButton><span role="status">{preview ? 'Example only. No project data changed.' : 'No changes until a real preview is approved.'}</span></div> : <button className="experience-switch" onClick={()=>setView('Recovery')}>What could we change? <span>Explore recovery <PublicArrow direction="right" /></span></button>}
     </div>
-    <div className="experience-bottom"><span><CountUp to={44} duration={.8} suffix="h"/> <small>Team capacity</small></span><span><CountUp to={36} duration={.8} suffix="h"/> <small>Planned effort</small></span><Link href="/help#workload">How planning works ↗</Link></div>
+    <div className="experience-bottom"><span><CountUp to={44} duration={.8} suffix="h"/> <small>Team capacity</small></span><span><CountUp to={36} duration={.8} suffix="h"/> <small>Planned effort</small></span><Link href="/help#workload">How planning works <PublicArrow /></Link></div>
   </div>;
 }
 
@@ -46,5 +47,5 @@ export function ProductSignal() {
   const [loadScene, setLoadScene] = useState(false);
   // A published Spline embed URL is optional; never load an arbitrary third-party scene.
   const splineUrl = scene && /^https:\/\/my\.spline\.design\/[a-zA-Z0-9/_-]+\/?$/.test(scene) ? scene : '';
-  return <div className="product-signal"><SignalShader/><div><p>LESS GUESSWORK. MORE ROOM TO BUILD.</p><h2>Make the connections.<br/>Find a way forward.</h2></div>{splineUrl && (loadScene ? <iframe src={splineUrl} title="ContriGraph interactive 3D scene" loading="lazy" referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin"/> : <button onClick={()=>setLoadScene(true)}>Explore the 3D scene ↗</button>)}</div>;
+  return <div className="product-signal"><SignalShader/><div><p>LESS GUESSWORK. MORE ROOM TO BUILD.</p><h2>Make the connections.<br/>Find a way forward.</h2></div>{splineUrl && (loadScene ? <iframe src={splineUrl} title="ContriGraph interactive 3D scene" loading="lazy" referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin"/> : <button onClick={()=>setLoadScene(true)}>Explore the 3D scene <PublicArrow /></button>)}</div>;
 }

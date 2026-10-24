@@ -1,5 +1,17 @@
 # ContriGraph in use
 
+## Performance report
+
+A readable report generated from the saved project revision after an isolated two-account collaboration check. Includes a print/PDF action and a matching JSON export.
+
+![Saved project performance report](screenshots/performance-report.png)
+
+## Independent review
+
+The lead opens a member's submitted work from the notification inbox, reads the documentation evidence and can independently accept it. This screenshot uses isolated QA data.
+
+![Lead reviewing a submitted deliverable](screenshots/collaboration-review.png)
+
 ## Interactive product walkthrough
 
 The live public page explains assignment, help, lead replies and review through a keyboard-accessible example. All people and project details in this walkthrough are fictional.

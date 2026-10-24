@@ -17,6 +17,7 @@ import {
 import { Modal, Field, LoadTable } from "@/components/WorkspaceUI";
 import { dependencyPositions } from "@/lib/graph";
 import TaskBoard from "@/components/TaskBoard";
+import ProjectReport from "@/components/ProjectReport";
 import TaskQuickActions from "@/components/TaskQuickActions";
 import NotificationInbox, {
   Notification,
@@ -36,7 +37,7 @@ import WorkspaceMotion from "@/components/WorkspaceMotion";
 import InvitationDialog from "@/components/InvitationDialog";
 import CountUp from "@/components/CountUp";
 import SkiperLink from "@/components/SkiperLink";
-import { api, post, download, ApiError } from "@/lib/api";
+import { api, post, ApiError } from "@/lib/api";
 import {
   User,
   Project,
@@ -67,6 +68,7 @@ const sections = [
   ["Skill coverage", ShieldCheck],
   ["Contributions", ChartBar],
   ["Activity", ClockCounterClockwise],
+  ["Report", DownloadSimple],
   ["What-if simulator", Flask],
   ["Archived tasks", ClockCounterClockwise],
 ] as const;
@@ -489,20 +491,9 @@ export default function Home({
                   ? "Server saved · v" + p.version
                   : "Connected"}
             </span>
-            <button
-              onClick={() =>
-                run(async () => {
-                  if (p)
-                    download(
-                      "contrigraph-report.json",
-                      await api("/projects/" + p.id + "/report"),
-                    );
-                })
-              }
-              disabled={!p}
-            >
+            <button onClick={() => setSection("Report")} disabled={!p}>
               <DownloadSimple size={16} />
-              Export report
+              View report
             </button>
           </div>
         </header>
@@ -560,14 +551,23 @@ export default function Home({
                       ? d.description
                       : section === "My work"
                         ? "Your assigned work, deadlines, and next steps."
-                        : section === "Team requests"
-                          ? "Ask for a decision. Keep the response with the work."
-                          : section === "What-if simulator"
-                            ? "Try changes to assignments, capacity, scope, or dates before approving a new plan."
-                            : "Plan, update, and review your team’s work."}
+                        : section === "Report"
+                          ? "Review a saved snapshot of delivery, workload, decisions, and contribution evidence."
+                          : section === "Team requests"
+                            ? "Ask for a decision. Keep the response with the work."
+                            : section === "What-if simulator"
+                              ? "Try changes to assignments, capacity, scope, or dates before approving a new plan."
+                              : "Plan, update, and review your team’s work."}
                   </p>
                 </div>
-                {lead ? (
+                {section === "Report" ? (
+                  <button
+                    className="cg-primary"
+                    onClick={() => setSection("Overview")}
+                  >
+                    Back to overview
+                  </button>
+                ) : lead ? (
                   <button className="cg-primary" onClick={newTask}>
                     <Plus size={17} />
                     New task
@@ -601,6 +601,13 @@ export default function Home({
                   requestHelp={askLead}
                   showBoard={() => goBoard()}
                   showRequests={() => setSection("Team requests")}
+                />
+              )}
+              {section === "Report" && (
+                <ProjectReport
+                  key={p.id}
+                  projectId={p.id}
+                  version={p.version}
                 />
               )}
               {section === "Team requests" && (

@@ -30,6 +30,7 @@ On macOS/Linux, activate the virtual environment with `source services/api/.venv
 
 ## What works
 
+- Readable project performance report with delivery summary, milestones, workload, contribution evidence, task approvals, requests, updates and recorded activity. Use **View report → Print / Save PDF** for the browser print dialog, or download the same saved snapshot as JSON. A changed project disables printing/downloading until the report is refreshed.
 - Persistent, personal notification inbox across accessible projects: assignments, lead replies, help requests, blockers and review submissions. Read/unread state, pagination, bulk marking of displayed items, and direct task/request navigation. Polls every 15 seconds while active; no email or device push delivery.
 - My work opens by default with assigned tasks, remaining effort, deadlines, blockers and recent request replies. Navigation scrolls independently on laptops and collapses behind a project menu on mobile.
 - Task-linked team requests for help, deadline changes, reassignment, new work and archiving. Leads respond with a recorded decision; responses do not silently change the plan. Requests are visible to the project team.
@@ -84,7 +85,7 @@ npm test
 npm run build
 ```
 
-The 110-test backend suite covers scheduling, approvals, roles, invitations, attachments, and Clerk authentication. Clerk checks exercise real RSA signatures, expiry, issuer and origin validation, verified primary email, stable account mapping, rejection of old sessions, and project isolation. Tests use isolated databases and mocked external identity responses.
+The backend suite covers scheduling, approvals, roles, invitations, attachments, notifications, two-account collaboration and Clerk authentication. Clerk checks exercise real RSA signatures, expiry, issuer and origin validation, verified primary email, stable account mapping, rejection of old sessions, and project isolation. Tests use isolated databases and mocked external identity responses. See [the collaboration demonstration](docs/COLLABORATION-DEMO.md) for the report workflow and its verification limits.
 
 Browser checks verified the live Clerk Google/email login and signup screens. Production Google sign-in completed and opened an authenticated workspace. Ten public route checks passed, including caching, security headers, canonical TLS redirects, metadata, and body limits. Inbox delivery for email signup still needs the account owner’s final check. The deployed application uses the Clerk production instance at `clerk.dsvv.live`. Local development keeps a separate development instance; live keys stay in VPS environment files.
 

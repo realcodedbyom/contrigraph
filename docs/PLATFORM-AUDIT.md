@@ -1,5 +1,13 @@
 # Platform audit and next improvements
 
+## Readable reporting and two-account collaboration
+
+View report now opens a saved performance snapshot with browser print/PDF styling and the matching JSON download. It covers delivery, milestones, workload/capacity, separate contribution dimensions, risks/recommendations, task acceptance, team requests, latest update and available activity. A newer project revision disables export until refresh. Deferred scope is excluded from completion, and per-project forecast assumptions and the 1,000-event history limit remain explicit.
+
+An isolated two-account browser journey verified assignment → notification → help request → lead reply → documented submission → review alert → independent acceptance. A full API restart followed by a fresh member login confirmed the persisted accepted task, resolved reply and notifications. The automated journey adds attachment persistence, self-approval rejection and report checks for both accounts. Local and VPS suites pass 138 tests; both release builds pass. The temporary QA sign-in route was removed. No test mutations were made to production.
+
+PDF-save verification is limited: the print action was invoked, but desktop Computer Use stopped at print preview because it could not confidently identify the browser URL. A saved PDF and its pagination were not independently verified. See [the detailed demonstration](COLLABORATION-DEMO.md) and sample-data screenshots.
+
 ## Notification inbox and interactive product tour
 
 The personal inbox now covers assignments (including approved portfolio redistribution), help requests, new/changed blockers, lead replies and review submissions. Only claimed recipients receive alerts; the actor does not notify themselves. Project and notification writes share a transaction, and stale or replayed updates cannot create duplicate alerts. Read state is private to each account and does not modify project versions. Every read and read-state mutation rechecks current membership. The new `003_notifications.sql` migration adds a private RLS-enabled table; existing project data is preserved. No historical backfill, email or device push is implied. Active windows poll every 15 seconds; older items are paginated.
